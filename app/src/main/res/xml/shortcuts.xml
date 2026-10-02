@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_jot"
+        android:shortcutId="jot"
+        android:shortcutShortLabel="@string/jot">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.mbk.loapunto.CaptureActivity"
+            android:targetPackage="com.mbk.loapunto" />
+    </shortcut>
+</shortcuts>

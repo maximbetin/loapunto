@@ -1,0 +1,20 @@
+# Local tooling and generated output
+/.gradle/
+/.kotlin/
+/.idea/
+**/build/
+/out/
+/captures/
+/.externalNativeBuild/
+/.cxx/
+*.iml
+local.properties
+*.class
+*.log
+*.hprof
+*.apk
+*.aab
+*.zip
+*.jar
+!/gradle/wrapper/gradle-wrapper.jar
+hs_err_pid*
