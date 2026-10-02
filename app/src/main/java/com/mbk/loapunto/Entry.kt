@@ -62,6 +62,18 @@ fun splitTitle(raw: String): Pair<String, String> {
     return if (lineBreak < 0) trimmed to "" else trimmed.substring(0, lineBreak).trim() to trimmed.substring(lineBreak + 1).trim()
 }
 
+/**
+ * Parked in Later until [day]. A due date (or reminder) set before that day moves to it, keeping
+ * its time: it can't be acted on while parked, so "remind me at 9" becomes 9 on the day it's back.
+ */
+fun Entry.parkedUntil(day: LocalDate, now: Long = System.currentTimeMillis()): Entry = copy(
+    status = Status.LATER,
+    rank = now,
+    movedAt = now,
+    backOn = day,
+    due = due?.let { if (it.isBefore(day)) day else it },
+)
+
 fun Entry.toJson(): JSONObject = JSONObject()
     .put("id", id)
     .put("text", text)

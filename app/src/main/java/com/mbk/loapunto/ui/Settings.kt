@@ -25,6 +25,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -34,6 +37,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mbk.loapunto.ClearHistory
 import com.mbk.loapunto.EntryStore
 import com.mbk.loapunto.Nudge
 import com.mbk.loapunto.R
@@ -102,6 +106,13 @@ fun SettingsSheet(onNudge: () -> Unit, onBackUp: () -> Unit, onRestore: () -> Un
             SettingRow(R.drawable.ic_save, stringResource(R.string.backup)) {
                 TextButton(onClick = { onDismiss(); onBackUp() }) { Text(stringResource(R.string.save)) }
                 TextButton(onClick = { onDismiss(); onRestore() }) { Text(stringResource(R.string.restore)) }
+            }
+            var clearHistory by remember { mutableStateOf(ClearHistory.isOn(context)) }
+            SettingRow(R.drawable.ic_history, stringResource(R.string.clear_history)) {
+                TextButton(onClick = {
+                    clearHistory = !clearHistory
+                    ClearHistory.set(context, clearHistory)
+                }) { Text(stringResource(if (clearHistory) R.string.after_30_days else R.string.never)) }
             }
         }
     }

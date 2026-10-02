@@ -156,12 +156,22 @@ object Nudge {
     }
 }
 
+/** Whether Done and Trash let go of entries after 30 days. On unless turned off. */
+object ClearHistory {
+    private const val KEY = "clearHistory"
+    private fun prefs(context: Context) = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, true)
+
+    fun set(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY, on).apply()
+}
+
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Reminders.ACTION_NUDGE) {
             // Housekeeping first, so entries due back today are counted in Today.
             val pending = goAsync()
-            val save = EntryStore.housekeeping()
+            val save = EntryStore.housekeeping(ClearHistory.isOn(context))
             Reminders.showNudge(context, EntryStore.entries.value)
             Reminders.scheduleNudge(context)
             if (save == null) pending.finish() else save.invokeOnCompletion { pending.finish() }

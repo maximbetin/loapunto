@@ -138,11 +138,14 @@
     <string name="backup">Backup</string>
     <string name="one_at_a_time">One at a time</string>
     <string name="later_until">Later, until…</string>
-    <string name="back_on">Back %s</string>
+    <string name="back_on">Until %s</string>
     <string name="not_now">Not now</string>
     <string name="today_clear">Today\'s clear</string>
     <plurals name="still_in_today">
         <item quantity="one">%d still in Today</item>
         <item quantity="other">%d still in Today</item>
     </plurals>
+    <string name="clear_history">Clear history</string>
+    <string name="after_30_days">After 30 days</string>
+    <string name="never">Never</string>
 </resources>

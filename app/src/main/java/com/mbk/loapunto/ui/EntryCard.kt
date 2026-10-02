@@ -162,7 +162,7 @@ fun EntryCard(
                             content = if (overdue) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
-                    entry.backOn?.let { day ->
+                    entry.backOn?.takeIf { it != entry.due }?.let { day ->
                         Pill(
                             stringResource(R.string.back_on, formatDue(day)),
                             MaterialTheme.colorScheme.tertiaryContainer,

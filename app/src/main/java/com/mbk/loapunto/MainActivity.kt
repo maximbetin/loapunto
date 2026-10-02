@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        EntryStore.housekeeping()
+        EntryStore.housekeeping(ClearHistory.isOn(this))
     }
 
     override fun onNewIntent(intent: Intent) {

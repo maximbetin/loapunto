@@ -143,7 +143,7 @@
     <string name="backup">Copia</string>
     <string name="one_at_a_time">De una en una</string>
     <string name="later_until">Luego, hasta…</string>
-    <string name="back_on">Vuelve %s</string>
+    <string name="back_on">Hasta %s</string>
     <string name="not_now">Ahora no</string>
     <string name="today_clear">Hoy está despejado</string>
     <plurals name="still_in_today">
@@ -151,4 +151,7 @@
         <item quantity="many">%d siguen en Hoy</item>
         <item quantity="other">%d siguen en Hoy</item>
     </plurals>
+    <string name="clear_history">Vaciar historial</string>
+    <string name="after_30_days">A los 30 días</string>
+    <string name="never">Nunca</string>
 </resources>

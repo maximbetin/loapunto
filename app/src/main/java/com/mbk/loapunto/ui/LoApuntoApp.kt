@@ -68,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mbk.loapunto.ClearHistory
 import com.mbk.loapunto.Entry
 import com.mbk.loapunto.EntryStore
 import com.mbk.loapunto.Nudge
@@ -370,7 +371,7 @@ private fun ArchiveScreen(entries: List<Entry>, onOpen: (Entry) -> Unit, onBack:
                 title = {
                     Column {
                         Text(stringResource(R.string.history), fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
-                        Text(
+                        if (ClearHistory.isOn(LocalContext.current)) Text(
                             stringResource(R.string.history_note),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

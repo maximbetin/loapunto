@@ -22,14 +22,14 @@ Each entry has a title and optional details you can add later. **Make it a check
 
 ## Organise
 
-- Three lists: **Inbox**, **Today**, **Later**. 🕘 **History** holds Done and Trash (cleared after 30 days); ⚙ has the daily nudge and backups.
+- Three lists: **Inbox**, **Today**, **Later**. 🕘 **History** holds Done and Trash (cleared after 30 days, or never: ⚙); ⚙ has the daily nudge and backups.
 - **Hold** an entry for big buttons: Today / Later / Inbox / Done / Trash.
 - **Drag ⋮⋮** to reorder. The bar on the left fades from top to bottom so the order is visible at a glance.
 - New entries and moved entries join the **bottom** of a list, so things keep the order you sent them in and never jump above what you put first.
 - **Sort inbox one by one**: tidy each entry and send it somewhere, or skip it.
 - Add a time to a due date to get a reminder notification (text is hidden on the lock screen), with **Done**, **In 1 hour** and **Tomorrow** buttons.
 - **One at a time** (Today): only the next entry on screen, with Done, Later and Not now.
-- **Later, until…** (hold an entry): parks it in Later, faded, until a day you pick; then it comes back into Today by itself.
+- **Later, until…** (hold an entry): parks it in Later, faded, until a day you pick; then it comes back into Today by itself. A reminder set before that day moves to it, same time.
 - **Daily nudge** (09:00 by default): only the counts for Today and Inbox, and only when there's something.
 - Today items from earlier days show a small **left over · Keep · Later** bar. Entries untouched for a month fade a little.
 - English or Spanish, following the phone's language.
