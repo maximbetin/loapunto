@@ -30,6 +30,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        EntryStore.housekeeping()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getStringExtra(Reminders.EXTRA_ENTRY_ID)?.let { openRequest = it }

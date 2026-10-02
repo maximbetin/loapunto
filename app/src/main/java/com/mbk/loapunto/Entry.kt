@@ -35,10 +35,12 @@ data class Entry(
     val dueTime: LocalTime? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt,
-    /** Position within its list, smallest first. Newer entries land on top by default. */
-    val rank: Long = -createdAt,
+    /** Position within its list, smallest first. New entries join the bottom. */
+    val rank: Long = createdAt,
     /** When it last changed list: drives "done today" and Today's left-overs. */
     val movedAt: Long = createdAt,
+    /** Parked in Later until this day, then it comes back into Today on its own. */
+    val backOn: LocalDate? = null,
 ) {
     val isOpen get() = status != Status.DONE && status != Status.TRASH
 
@@ -71,6 +73,7 @@ fun Entry.toJson(): JSONObject = JSONObject()
     .put("updatedAt", updatedAt)
     .put("rank", rank)
     .put("movedAt", movedAt)
+    .put("backOn", backOn?.toString() ?: JSONObject.NULL)
 
 private fun JSONObject.optText(key: String) = optString(key).takeIf { it.isNotEmpty() && it != "null" }
 
@@ -91,6 +94,7 @@ fun entryFromJson(json: JSONObject): Entry {
         updatedAt = updatedAt,
         rank = json.optLong("rank", -createdAt),
         movedAt = json.optLong("movedAt", updatedAt),
+        backOn = json.optText("backOn")?.let(LocalDate::parse),
     )
 }
 

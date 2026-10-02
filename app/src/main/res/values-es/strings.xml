@@ -8,7 +8,6 @@
     <string name="later">Luego</string>
     <string name="done">Hecho</string>
     <string name="trash">Papelera</string>
-    <string name="done_and_trash">Hecho y papelera</string>
 
     <!-- Capture -->
     <string name="capture_placeholder">¿Qué tienes en mente?</string>
@@ -27,13 +26,10 @@
     <string name="close_search">Cerrar búsqueda</string>
     <string name="search_everything">Buscar en todo</string>
     <string name="clear">Borrar</string>
-    <string name="more">Más</string>
     <string name="new_button">Nueva</string>
     <string name="sort_inbox">Ordenar la entrada una a una (%d)</string>
     <string name="keep">Mantener</string>
     <string name="off">apagado</string>
-    <string name="back_up">Copia de seguridad</string>
-    <string name="restore_backup">Restaurar copia</string>
     <string name="drag_to_reorder">Arrastra para reordenar</string>
     <string name="hint_reorder">Mantén pulsada una nota para moverla · arrastra ⋮⋮ para reordenar</string>
     <string name="hint_hold">Mantén pulsada una nota para moverla</string>
@@ -139,4 +135,20 @@
     <string name="turn_off">Apagar</string>
     <string name="nudge_today">Hoy: %d</string>
     <string name="nudge_inbox">Entrada: %d</string>
+
+    <!-- History, settings, focus, parking -->
+    <string name="history">Historial</string>
+    <string name="history_note">Se borra a los 30 días</string>
+    <string name="settings">Ajustes</string>
+    <string name="backup">Copia</string>
+    <string name="one_at_a_time">De una en una</string>
+    <string name="later_until">Luego, hasta…</string>
+    <string name="back_on">Vuelve %s</string>
+    <string name="not_now">Ahora no</string>
+    <string name="today_clear">Hoy está despejado</string>
+    <plurals name="still_in_today">
+        <item quantity="one">%d sigue en Hoy</item>
+        <item quantity="many">%d siguen en Hoy</item>
+        <item quantity="other">%d siguen en Hoy</item>
+    </plurals>
 </resources>

@@ -3,13 +3,22 @@ package com.mbk.loapunto.ui
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -18,9 +27,11 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mbk.loapunto.EntryStore
@@ -74,6 +85,36 @@ fun rememberBackup(snackbar: SnackbarHostState): Pair<() -> Unit, () -> Unit> {
     }
     return { save.launch("loapunto-${LocalDate.now()}.json") } to
         { open.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
+}
+
+/** Two rows, mostly icons: the nudge time, and backup. The pickers are owned by the caller. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsSheet(onNudge: () -> Unit, onBackUp: () -> Unit, onRestore: () -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface) {
+        Column(Modifier.navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
+            SettingRow(R.drawable.ic_notifications, stringResource(R.string.daily_nudge)) {
+                TextButton(onClick = { onDismiss(); onNudge() }) {
+                    Text(Nudge.time(context)?.let(::formatTime) ?: stringResource(R.string.off))
+                }
+            }
+            SettingRow(R.drawable.ic_save, stringResource(R.string.backup)) {
+                TextButton(onClick = { onDismiss(); onBackUp() }) { Text(stringResource(R.string.save)) }
+                TextButton(onClick = { onDismiss(); onRestore() }) { Text(stringResource(R.string.restore)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingRow(@DrawableRes icon: Int, label: String, actions: @Composable RowScope.() -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(16.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        actions()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

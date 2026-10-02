@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,12 +18,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -82,6 +81,7 @@ private sealed interface Screen {
     data object Lists : Screen
     data object Archive : Screen
     data object Sorting : Screen
+    data object Focus : Screen
     data class Detail(val id: String) : Screen
 }
 
@@ -94,6 +94,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
     var sorting by rememberSaveable { mutableStateOf(false) }
     var archive by rememberSaveable { mutableStateOf(false) }
+    var focusing by rememberSaveable { mutableStateOf(false) }
     val open = openId?.let { id -> entries.firstOrNull { it.id == id } }
 
     // The daily nudge is on by default, so ask for notifications once. Android stops asking after a "no".
@@ -119,6 +120,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
     val screen = when {
         open != null -> Screen.Detail(open.id)
         sorting -> Screen.Sorting
+        focusing -> Screen.Focus
         archive -> Screen.Archive
         else -> Screen.Lists
     }
@@ -126,6 +128,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
         when (target) {
             is Screen.Detail -> entries.firstOrNull { it.id == target.id }?.let { EntryDetailScreen(it, onBack = { openId = null }) }
             Screen.Sorting -> SortInboxScreen(entries, onExit = { sorting = false })
+            Screen.Focus -> FocusScreen(ordered(entries, Status.TODAY), onExit = { focusing = false })
             Screen.Archive -> ArchiveScreen(entries, onOpen = { openId = it.id }, onBack = { archive = false })
             Screen.Lists -> ListScreen(
                 entries,
@@ -133,6 +136,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
                 onTab = { tab = it },
                 onOpen = { openId = it.id },
                 onSort = { sorting = true },
+                onFocus = { focusing = true },
                 onArchive = { archive = true },
                 onCapture = onCapture,
             )
@@ -142,7 +146,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
 
 /** Moves (or, with a null target, deletes) an entry and offers Undo. */
 @Composable
-private fun rememberMover(snackbar: SnackbarHostState): (Entry, Status?) -> Unit {
+fun rememberMover(snackbar: SnackbarHostState): (Entry, Status?) -> Unit {
     val scope = rememberCoroutineScope()
     val res = LocalResources.current
     return remember(snackbar, scope, res) {
@@ -163,7 +167,7 @@ private fun rememberMover(snackbar: SnackbarHostState): (Entry, Status?) -> Unit
     }
 }
 
-private fun ordered(entries: List<Entry>, status: Status): List<Entry> =
+fun ordered(entries: List<Entry>, status: Status): List<Entry> =
     entries.filter { it.status == status }.let { list ->
         if (status.isOrdered) list.sortedWith(compareBy<Entry> { it.rank }.thenByDescending { it.createdAt })
         else list.sortedByDescending { it.updatedAt }
@@ -177,16 +181,16 @@ private fun ListScreen(
     onTab: (Status) -> Unit,
     onOpen: (Entry) -> Unit,
     onSort: () -> Unit,
+    onFocus: () -> Unit,
     onArchive: () -> Unit,
     onCapture: () -> Unit,
 ) {
-    val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val move = rememberMover(snackbar)
     val (backUp, restore) = rememberBackup(snackbar)
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    var menuOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
     var nudgeDialog by rememberSaveable { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
 
@@ -250,35 +254,11 @@ private fun ListScreen(
                         IconButton(onClick = { searching = true }) {
                             Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.search))
                         }
-                        Box {
-                            IconButton(onClick = { menuOpen = true }) {
-                                Icon(painterResource(R.drawable.ic_more), contentDescription = stringResource(R.string.more))
-                            }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.done_and_trash)) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.ic_archive), contentDescription = null) },
-                                    onClick = { menuOpen = false; onArchive() },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(R.string.daily_nudge) + " · " +
-                                                (Nudge.time(context)?.let(::formatTime) ?: stringResource(R.string.off)),
-                                        )
-                                    },
-                                    leadingIcon = { Icon(painterResource(R.drawable.ic_event), contentDescription = null) },
-                                    onClick = { menuOpen = false; nudgeDialog = true },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.back_up)) },
-                                    onClick = { menuOpen = false; backUp() },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.restore_backup)) },
-                                    onClick = { menuOpen = false; restore() },
-                                )
-                            }
+                        IconButton(onClick = onArchive) {
+                            Icon(painterResource(R.drawable.ic_history), contentDescription = stringResource(R.string.history))
+                        }
+                        IconButton(onClick = { settingsOpen = true }) {
+                            Icon(painterResource(R.drawable.ic_settings), contentDescription = stringResource(R.string.settings))
                         }
                     } else if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
                         Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.clear))
@@ -305,6 +285,16 @@ private fun ListScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     ) { Text(stringResource(R.string.sort_inbox, inboxCount)) }
                 }
+                if (tab == Status.TODAY && visible.isNotEmpty()) {
+                    FilledTonalButton(
+                        onClick = onFocus,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    ) {
+                        Icon(painterResource(R.drawable.ic_focus), contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.one_at_a_time))
+                    }
+                }
                 if (leftOvers.isNotEmpty()) {
                     LeftOverBar(
                         count = leftOvers.size,
@@ -327,6 +317,12 @@ private fun ListScreen(
         }
     }
 
+    if (settingsOpen) SettingsSheet(
+        onNudge = { nudgeDialog = true },
+        onBackUp = backUp,
+        onRestore = restore,
+        onDismiss = { settingsOpen = false },
+    )
     if (nudgeDialog) NudgeDialog(onDismiss = { nudgeDialog = false })
 }
 
@@ -371,7 +367,16 @@ private fun ArchiveScreen(entries: List<Entry>, onOpen: (Entry) -> Unit, onBack:
                         Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back))
                     }
                 },
-                title = { Text(stringResource(R.string.done_and_trash), fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text(stringResource(R.string.history), fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
+                        Text(
+                            stringResource(R.string.history_note),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
             )
         },
     ) { padding ->
@@ -526,6 +531,10 @@ private fun EntryList(
             onEdit = {
                 sheetFor = null
                 onOpen(entry)
+            },
+            onParkUntil = { day ->
+                sheetFor = null
+                EntryStore.parkUntil(entry.id, day)
             },
         )
     }

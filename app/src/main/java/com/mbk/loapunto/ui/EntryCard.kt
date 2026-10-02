@@ -99,7 +99,8 @@ fun EntryCard(
 ) {
     val done = entry.status == Status.DONE
     // Untouched for a month: faded, but still clearly there.
-    val fade = if (entry.isStale()) 0.55f else 1f
+    // Parked until a later day: also faded, it isn't for now.
+    val fade = if (entry.isStale() || entry.backOn != null) 0.55f else 1f
     Card(
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
@@ -159,6 +160,13 @@ fun EntryCard(
                             text = stringResource(if (overdue) R.string.overdue else R.string.due, formatDue(due, entry.dueTime)),
                             container = if (overdue) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
                             content = if (overdue) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    entry.backOn?.let { day ->
+                        Pill(
+                            stringResource(R.string.back_on, formatDue(day)),
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                            MaterialTheme.colorScheme.onTertiaryContainer,
                         )
                     }
                     if (showStatus) {

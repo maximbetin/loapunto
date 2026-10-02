@@ -19,6 +19,9 @@ import org.json.JSONArray
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.time.LocalDate
+
+private const val KEEP_HISTORY_MILLIS = 30L * 24 * 60 * 60 * 1000
 
 /**
  * All entries live in memory and are mirrored to a single JSON file.
@@ -71,7 +74,35 @@ object EntryStore {
     /** Moving to another list puts the entry at the bottom of it, so things keep the order you sent them in. */
     fun move(id: String, status: Status, immediate: Boolean = false) = update(id, immediate) {
         val now = System.currentTimeMillis()
-        if (it.status == status) it else it.copy(status = status, rank = now, movedAt = now)
+        if (it.status == status) it else it.copy(status = status, rank = now, movedAt = now, backOn = null)
+    }
+
+    /** Parks an entry in Later until [day]; [housekeeping] brings it back into Today. */
+    fun parkUntil(id: String, day: LocalDate) = update(id) {
+        val now = System.currentTimeMillis()
+        it.copy(status = Status.LATER, rank = now, movedAt = now, backOn = day)
+    }
+
+    /**
+     * Brings parked entries whose day has come back into Today, and lets go of anything that has
+     * sat in Done or Trash for 30 days. Cheap; called whenever the app comes to the front.
+     */
+    fun housekeeping(): Job? {
+        val today = LocalDate.now()
+        val now = System.currentTimeMillis()
+        val forgetBefore = now - KEEP_HISTORY_MILLIS
+        val list = _entries.value
+        fun isDue(e: Entry) = e.status == Status.LATER && e.backOn != null && !e.backOn.isAfter(today)
+        fun isOld(e: Entry) = !e.isOpen && e.movedAt < forgetBefore
+        if (list.none { isDue(it) || isOld(it) }) return null
+        return change(immediate = true) { current ->
+            val waking = current.filter(::isDue).sortedBy { it.backOn }.map { it.id }
+            current.filterNot(::isOld).map { e ->
+                val index = waking.indexOf(e.id)
+                if (index < 0) e
+                else e.copy(status = Status.TODAY, rank = now + index, movedAt = now, updatedAt = now, backOn = null)
+            }
+        }
     }
 
     /** Moves several entries, keeping their order, to the bottom of another list. */
@@ -79,7 +110,7 @@ object EntryStore {
         val now = System.currentTimeMillis()
         val position = ids.withIndex().associate { (index, id) -> id to index }
         list.map { entry ->
-            position[entry.id]?.let { entry.copy(status = status, rank = now + it, movedAt = now, updatedAt = now) } ?: entry
+            position[entry.id]?.let { entry.copy(status = status, rank = now + it, movedAt = now, updatedAt = now, backOn = null) } ?: entry
         }
     }
 

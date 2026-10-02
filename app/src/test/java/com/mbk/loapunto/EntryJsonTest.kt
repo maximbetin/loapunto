@@ -21,6 +21,7 @@ class EntryJsonTest {
             updatedAt = 2_000,
             rank = 42,
             movedAt = 1_500,
+            backOn = LocalDate.of(2026, 10, 6),
         )
         assertEquals(entry, entryFromJson(JSONObject(entry.toJson().toString())))
     }

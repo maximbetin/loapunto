@@ -8,19 +8,31 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,11 +40,21 @@ import androidx.compose.ui.unit.dp
 import com.mbk.loapunto.Entry
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /** Big, thumb-sized destinations. A null target means "delete for good" (only offered from Trash). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoveSheet(entry: Entry, onDismiss: () -> Unit, onMove: (Status?) -> Unit, onEdit: () -> Unit) {
+fun MoveSheet(
+    entry: Entry,
+    onDismiss: () -> Unit,
+    onMove: (Status?) -> Unit,
+    onEdit: () -> Unit,
+    onParkUntil: (LocalDate) -> Unit,
+) {
+    var picking by remember { mutableStateOf(false) }
     val targets: List<Status?> = buildList {
         addAll(listOf(Status.TODAY, Status.LATER, Status.INBOX, Status.DONE, Status.TRASH).filter { it != entry.status })
         if (entry.status == Status.TRASH) add(null)
@@ -60,9 +82,41 @@ fun MoveSheet(entry: Entry, onDismiss: () -> Unit, onMove: (Status?) -> Unit, on
                 }
                 Spacer(Modifier.height(10.dp))
             }
-            TextButton(onClick = onEdit, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(stringResource(R.string.open_and_edit)) }
+            Row(Modifier.align(Alignment.CenterHorizontally)) {
+                if (entry.isOpen) TextButton(onClick = { picking = true }) {
+                    Icon(painterResource(R.drawable.ic_event), contentDescription = null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.later_until))
+                }
+                TextButton(onClick = onEdit) { Text(stringResource(R.string.open_and_edit)) }
+            }
         }
     }
+
+    if (picking) ParkDatePicker(onDismiss = { picking = false }, onPick = { picking = false; onParkUntil(it) })
+}
+
+/** Picks a day from tomorrow on. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ParkDatePicker(onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
+    val tomorrow = LocalDate.now().plusDays(1)
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = tomorrow.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long) =
+                !Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC).toLocalDate().isBefore(tomorrow)
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
+            }) { Text(stringResource(R.string.set)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    ) { DatePicker(state) }
 }
 
 @Composable

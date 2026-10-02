@@ -159,8 +159,12 @@ object Nudge {
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Reminders.ACTION_NUDGE) {
+            // Housekeeping first, so entries due back today are counted in Today.
+            val pending = goAsync()
+            val save = EntryStore.housekeeping()
             Reminders.showNudge(context, EntryStore.entries.value)
             Reminders.scheduleNudge(context)
+            if (save == null) pending.finish() else save.invokeOnCompletion { pending.finish() }
             return
         }
         val id = intent.data?.lastPathSegment ?: return
