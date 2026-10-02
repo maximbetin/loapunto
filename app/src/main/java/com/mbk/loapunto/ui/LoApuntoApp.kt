@@ -89,7 +89,7 @@ private sealed interface Screen {
 private val MainTabs = listOf(Status.INBOX, Status.TODAY, Status.LATER)
 
 @Composable
-fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -> Unit) {
+fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: (Status) -> Unit) {
     val entries by EntryStore.entries.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(Status.INBOX) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -139,7 +139,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
                 onSort = { sorting = true },
                 onFocus = { focusing = true },
                 onArchive = { archive = true },
-                onCapture = onCapture,
+                onCapture = { onCapture(tab) },
             )
         }
     }
@@ -295,6 +295,15 @@ private fun ListScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.one_at_a_time))
                     }
+                }
+                if (tab == Status.LATER) {
+                    Text(
+                        stringResource(R.string.later_explainer),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp),
+                    )
                 }
                 if (leftOvers.isNotEmpty()) {
                     LeftOverBar(

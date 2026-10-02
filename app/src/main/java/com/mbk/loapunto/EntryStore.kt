@@ -54,10 +54,10 @@ object EntryStore {
     }
 
     /** New captures are written straight away: the capture screen closes right after. */
-    fun add(text: String): Job {
+    fun add(text: String, status: Status = Status.INBOX): Job {
         val (title, notes) = splitTitle(text)
         val now = System.currentTimeMillis()
-        return change(immediate = true) { it + Entry(text = title, notes = notes, createdAt = now, rank = now) }
+        return change(immediate = true) { it + Entry(text = title, notes = notes, status = status, createdAt = now, rank = now) }
     }
 
     /** Puts back an exact copy (used by undo). */

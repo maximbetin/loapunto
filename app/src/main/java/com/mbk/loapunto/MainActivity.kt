@@ -24,7 +24,9 @@ class MainActivity : ComponentActivity() {
                 LoApuntoApp(
                     openRequest = openRequest,
                     onOpenHandled = { openRequest = null },
-                    onCapture = { startActivity(Intent(this, CaptureActivity::class.java)) },
+                    onCapture = { list ->
+                        startActivity(Intent(this, CaptureActivity::class.java).putExtra(CaptureActivity.EXTRA_LIST, list.name))
+                    },
                 )
             }
         }

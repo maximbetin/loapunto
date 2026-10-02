@@ -2,6 +2,7 @@
     <string name="app_name" translatable="false">LoApunto</string>
     <string name="launcher_new">LoApunto +</string>
     <string name="new_entry">New entry</string>
+    <string name="new_in">New in %s</string>
 
     <!-- Lists -->
     <string name="inbox">Inbox</string>
@@ -16,7 +17,6 @@
         <item quantity="one">%d saved</item>
         <item quantity="other">%d saved</item>
     </plurals>
-    <string name="dictate">Dictate</string>
     <string name="cancel">Cancel</string>
     <string name="add_another">Add another</string>
     <string name="save">Save</string>
@@ -57,6 +57,7 @@
     <string name="empty_today_hint">Hold an entry in the inbox and move it here.</string>
     <string name="empty_later">Nothing parked for later</string>
     <string name="empty_later_hint">Keepers and someday-maybes go here.</string>
+    <string name="later_explainer">No date: things stay here until you move them. Ones set to \"Later, until…\" go back to Today on their day.</string>
     <string name="empty_done">Nothing done yet</string>
     <string name="empty_done_hint">Finished entries land here.</string>
     <string name="empty_trash">Trash is empty</string>

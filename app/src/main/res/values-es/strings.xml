@@ -1,6 +1,7 @@
 <resources>
     <string name="launcher_new">LoApunto +</string>
     <string name="new_entry">Nueva nota</string>
+    <string name="new_in">Nueva en %s</string>
 
     <!-- Lists -->
     <string name="inbox">Entrada</string>
@@ -16,7 +17,6 @@
         <item quantity="many">%d guardadas</item>
         <item quantity="other">%d guardadas</item>
     </plurals>
-    <string name="dictate">Dictar</string>
     <string name="cancel">Cancelar</string>
     <string name="add_another">Otra más</string>
     <string name="save">Guardar</string>
@@ -59,6 +59,7 @@
     <string name="empty_today_hint">Mantén pulsada una nota de la entrada y muévela aquí.</string>
     <string name="empty_later">Nada aparcado para luego</string>
     <string name="empty_later_hint">Lo que quieres guardar y los «algún día» van aquí.</string>
+    <string name="later_explainer">Sin fecha: se queda aquí hasta que lo muevas. Lo puesto en «Luego, hasta…» vuelve a Hoy ese día.</string>
     <string name="empty_done">Nada hecho todavía</string>
     <string name="empty_done_hint">Las notas terminadas acaban aquí.</string>
     <string name="empty_trash">La papelera está vacía</string>

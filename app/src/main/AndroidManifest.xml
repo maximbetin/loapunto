@@ -6,14 +6,6 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- The mic button hands off to an offline speech app such as FUTO Voice Input. -->
-    <queries>
-        <package android:name="org.futo.voiceinput" />
-        <intent>
-            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
-        </intent>
-    </queries>
-
     <application
         android:name=".App"
         android:icon="@mipmap/ic_launcher"
