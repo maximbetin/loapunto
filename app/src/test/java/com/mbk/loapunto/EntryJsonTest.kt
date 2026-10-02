@@ -2,6 +2,7 @@ package com.mbk.loapunto
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
@@ -11,13 +12,14 @@ class EntryJsonTest {
     @Test
     fun roundTripKeepsEveryField() {
         val entry = Entry(
-            text = "First line\nSecond line",
+            text = "Title",
+            notes = "Some details\nacross lines",
             status = Status.TODAY,
-            priority = Priority.HIGH,
             due = LocalDate.of(2026, 10, 3),
             dueTime = LocalTime.of(9, 30),
             createdAt = 1_000,
             updatedAt = 2_000,
+            rank = 42,
         )
         assertEquals(entry, entryFromJson(JSONObject(entry.toJson().toString())))
     }
@@ -29,20 +31,22 @@ class EntryJsonTest {
         assertNull(entry.due)
         assertNull(entry.dueTime)
         assertEquals(Status.INBOX, entry.status)
-        assertEquals(Priority.NORMAL, entry.priority)
         assertEquals(5L, entry.updatedAt)
+        assertEquals(-5L, entry.rank)
     }
 
     @Test
-    fun legacyStarBecomesHighPriority() {
-        val json = JSONObject("""{"id":"x","text":"t","status":"INBOX","starred":true,"createdAt":5}""")
-        assertEquals(Priority.HIGH, entryFromJson(json).priority)
+    fun legacyMultiLineTextSplitsIntoTitleAndNotes() {
+        val json = JSONObject("""{"id":"x","text":"First\nSecond\nThird","status":"INBOX","createdAt":5}""")
+        val entry = entryFromJson(json)
+        assertEquals("First", entry.text)
+        assertEquals("Second\nThird", entry.notes)
     }
 
     @Test
     fun onlyOpenEntriesWithDateAndTimeHaveReminders() {
         val base = Entry(text = "t", due = LocalDate.of(2026, 10, 3), dueTime = LocalTime.NOON)
-        assert(base.reminderAt != null)
+        assertNotNull(base.reminderAt)
         assertNull(base.copy(dueTime = null).reminderAt)
         assertNull(base.copy(status = Status.DONE).reminderAt)
         assertNull(base.copy(status = Status.TRASH).reminderAt)

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -112,7 +110,7 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
     val live by EntryStore.entries.collectAsStateWithLifecycle()
     val entry = live.firstOrNull { it.id == shown.id } ?: shown
     var text by remember(entry.id) { mutableStateOf(entry.text) }
-    fun send(status: Status) = EntryStore.update(entry.id) { it.copy(status = status) }
+    fun send(status: Status) = EntryStore.move(entry.id, status)
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -128,7 +126,7 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
                         EntryStore.update(entry.id) { it.copy(text = new) }
                     },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    keyboardOptions = TextKeyboard,
                     colors = transparentFieldColors(),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp).padding(4.dp),
                 )

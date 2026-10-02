@@ -15,15 +15,15 @@ A tiny personal Android inbox for thoughts: capture quickly, triage later.
 
 Tapping outside the capture sheet or going back keeps what you typed; only **Cancel** discards it.
 
-The first line of an entry is its title; anything below it is details (a shopping list, notes, whatever).
+Each entry has a title and optional details you can add later.
 
-## Triage
+## Organise
 
-- **Sort inbox one by one**: tidy each entry, pick a priority, send it to Today / Later / Done / Trash
-- Drag right past half the card: done (or reopen / restore)
-- Drag left past half the card: trash (or delete for good from Trash)
-- Tap an entry to edit it, set priority (High / Normal / Low), move it, or set a due date
-- Add a time to a due date to get a reminder notification (text is hidden on the lock screen)
+- Three lists: **Inbox**, **Today**, **Later**. Done and Trash live behind the box icon in the top bar.
+- **Hold** an entry for big buttons: Today / Later / Inbox / Done / Trash.
+- **Drag ⋮⋮** to reorder. The bar on the left fades from top to bottom so the order is visible at a glance.
+- **Sort inbox one by one**: tidy each entry and send it somewhere, or skip it.
+- Add a time to a due date to get a reminder notification (text is hidden on the lock screen).
 
 Everything stays on the phone in a single JSON file.
 

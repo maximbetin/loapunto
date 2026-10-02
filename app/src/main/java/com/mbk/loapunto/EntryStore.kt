@@ -51,7 +51,10 @@ object EntryStore {
     }
 
     /** New captures are written straight away: the capture screen closes right after. */
-    fun add(text: String) = change(immediate = true) { listOf(Entry(text = text)) + it }
+    fun add(text: String): Job {
+        val (title, notes) = splitTitle(text)
+        return change(immediate = true) { listOf(Entry(text = title, notes = notes)) + it }
+    }
 
     /** Puts back an exact copy (used by undo). */
     fun upsert(entry: Entry) = change { list ->
@@ -63,6 +66,19 @@ object EntryStore {
     }
 
     fun delete(id: String) = change { list -> list.filterNot { it.id == id } }
+
+    /** Moving to another list puts the entry at the top of it. */
+    fun move(id: String, status: Status) = update(id) {
+        if (it.status == status) it else it.copy(status = status, rank = -System.currentTimeMillis())
+    }
+
+    /** Applies a new order to one list, reusing that list's existing rank values. */
+    fun reorder(ids: List<String>) = change { list ->
+        val idSet = ids.toSet()
+        val ranks = list.filter { it.id in idSet }.map { it.rank }.sorted()
+        val newRank = ids.zip(ranks).toMap()
+        list.map { entry -> newRank[entry.id]?.let { entry.copy(rank = it) } ?: entry }
+    }
 
     /** Returns the save job so callers outside the UI (notification actions) can wait for it. */
     private fun change(immediate: Boolean = false, transform: (List<Entry>) -> List<Entry>): Job {

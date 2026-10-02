@@ -109,7 +109,7 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
                     onValueChange = { text = it },
                     placeholder = { Text("What's on your mind?") },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    keyboardOptions = TextKeyboard,
                     colors = transparentFieldColors(),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -147,3 +147,6 @@ fun transparentFieldColors() = TextFieldDefaults.colors(
     unfocusedIndicatorColor = Color.Transparent,
     disabledIndicatorColor = Color.Transparent,
 )
+
+/** Autocorrect off: it mangles mixed English/Spanish. Some keyboards may ignore the hint. */
+val TextKeyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, autoCorrectEnabled = false)

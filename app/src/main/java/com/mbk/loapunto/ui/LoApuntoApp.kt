@@ -2,17 +2,10 @@ package com.mbk.loapunto.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,12 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -46,26 +37,22 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mbk.loapunto.Entry
@@ -73,15 +60,17 @@ import com.mbk.loapunto.EntryStore
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.math.sign
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 private sealed interface Screen {
-    data object List : Screen
+    data object Lists : Screen
+    data object Archive : Screen
     data object Sorting : Screen
     data class Detail(val id: String) : Screen
 }
+
+private val MainTabs = listOf(Status.INBOX, Status.TODAY, Status.LATER)
 
 @Composable
 fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -> Unit) {
@@ -89,6 +78,7 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
     var tab by rememberSaveable { mutableStateOf(Status.INBOX) }
     var openId by rememberSaveable { mutableStateOf<String?>(null) }
     var sorting by rememberSaveable { mutableStateOf(false) }
+    var archive by rememberSaveable { mutableStateOf(false) }
     val open = openId?.let { id -> entries.firstOrNull { it.id == id } }
 
     LaunchedEffect(openRequest) {
@@ -102,45 +92,54 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
     val screen = when {
         open != null -> Screen.Detail(open.id)
         sorting -> Screen.Sorting
-        else -> Screen.List
+        archive -> Screen.Archive
+        else -> Screen.Lists
     }
     AnimatedContent(targetState = screen, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "screen") { target ->
         when (target) {
             is Screen.Detail -> entries.firstOrNull { it.id == target.id }?.let { EntryDetailScreen(it, onBack = { openId = null }) }
             Screen.Sorting -> SortInboxScreen(entries, onExit = { sorting = false })
-            Screen.List -> ListScreen(
+            Screen.Archive -> ArchiveScreen(entries, onOpen = { openId = it.id }, onBack = { archive = false })
+            Screen.Lists -> ListScreen(
                 entries,
                 tab,
                 onTab = { tab = it },
                 onOpen = { openId = it.id },
                 onSort = { sorting = true },
+                onArchive = { archive = true },
                 onCapture = onCapture,
             )
         }
     }
 }
 
-/** What swiping does depends on where the entry currently is. A null target deletes for good. */
-private class SwipeAction(val label: String, val icon: Int, val color: Color, val target: Status?, val message: String)
-
-private fun swipeRight(status: Status) = when (status) {
-    Status.DONE -> SwipeAction("Reopen", R.drawable.ic_restore, SwipeRestore, Status.INBOX, "Back in inbox")
-    Status.TRASH -> SwipeAction("Restore", R.drawable.ic_restore, SwipeRestore, Status.INBOX, "Restored to inbox")
-    else -> SwipeAction("Done", R.drawable.ic_check, SwipeDone, Status.DONE, "Marked done")
+/** Moves (or, with a null target, deletes) an entry and offers Undo. */
+@Composable
+private fun rememberMover(snackbar: SnackbarHostState): (Entry, Status?) -> Unit {
+    val scope = rememberCoroutineScope()
+    return remember(snackbar, scope) {
+        { entry, target ->
+            if (target == null) EntryStore.delete(entry.id) else EntryStore.move(entry.id, target)
+            val message = when (target) {
+                null -> "Deleted for good"
+                Status.DONE -> "Marked done"
+                Status.TRASH -> "Moved to trash"
+                else -> "Moved to ${target.label}"
+            }
+            scope.launch {
+                snackbar.currentSnackbarData?.dismiss()
+                val result = snackbar.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Short)
+                if (result == SnackbarResult.ActionPerformed) EntryStore.upsert(entry)
+            }
+        }
+    }
 }
 
-private fun swipeLeft(status: Status) =
-    if (status == Status.TRASH) SwipeAction("Delete", R.drawable.ic_delete, SwipeTrash, null, "Deleted for good")
-    else SwipeAction("Trash", R.drawable.ic_delete, SwipeTrash, Status.TRASH, "Moved to trash")
-
-private fun ordering(status: Status): Comparator<Entry> = when (status) {
-    Status.INBOX -> compareBy<Entry> { it.priority }.thenByDescending { it.createdAt }
-    Status.TODAY, Status.LATER -> compareBy<Entry> { it.priority }
-        .thenBy(nullsLast()) { it.due }
-        .thenBy(nullsLast()) { it.dueTime }
-        .thenByDescending { it.createdAt }
-    Status.DONE, Status.TRASH -> compareByDescending { it.updatedAt }
-}
+private fun ordered(entries: List<Entry>, status: Status): List<Entry> =
+    entries.filter { it.status == status }.let { list ->
+        if (status.isOrdered) list.sortedWith(compareBy<Entry> { it.rank }.thenByDescending { it.createdAt })
+        else list.sortedByDescending { it.updatedAt }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,31 +149,24 @@ private fun ListScreen(
     onTab: (Status) -> Unit,
     onOpen: (Entry) -> Unit,
     onSort: () -> Unit,
+    onArchive: () -> Unit,
     onCapture: () -> Unit,
 ) {
     val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val move = rememberMover(snackbar)
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     val searchFocus = remember { FocusRequester() }
 
     val searchActive = searching && query.isNotBlank()
     val visible = remember(entries, tab, query, searchActive) {
-        if (searchActive) entries.filter { it.status != Status.TRASH && it.text.contains(query.trim(), ignoreCase = true) }
-            .sortedByDescending { it.updatedAt }
-        else entries.filter { it.status == tab }.sortedWith(ordering(tab))
+        if (searchActive) {
+            val q = query.trim()
+            entries.filter { it.status != Status.TRASH && (it.text.contains(q, true) || it.notes.contains(q, true)) }
+                .sortedByDescending { it.updatedAt }
+        } else ordered(entries, tab)
     }
     val inboxCount = entries.count { it.status == Status.INBOX }
-
-    fun apply(entry: Entry, action: SwipeAction) {
-        val target = action.target
-        if (target == null) EntryStore.delete(entry.id) else EntryStore.update(entry.id) { it.copy(status = target) }
-        scope.launch {
-            snackbar.currentSnackbarData?.dismiss()
-            val result = snackbar.showSnackbar(action.message, actionLabel = "Undo", duration = SnackbarDuration.Short)
-            if (result == SnackbarResult.ActionPerformed) EntryStore.upsert(entry)
-        }
-    }
 
     fun closeSearch() {
         searching = false
@@ -209,8 +201,13 @@ private fun ListScreen(
                     }
                 },
                 actions = {
-                    if (!searching) IconButton(onClick = { searching = true }) {
-                        Icon(painterResource(R.drawable.ic_search), contentDescription = "Search")
+                    if (!searching) {
+                        IconButton(onClick = { searching = true }) {
+                            Icon(painterResource(R.drawable.ic_search), contentDescription = "Search")
+                        }
+                        IconButton(onClick = onArchive) {
+                            Icon(painterResource(R.drawable.ic_archive), contentDescription = "Done and trash")
+                        }
                     } else if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
                         Icon(painterResource(R.drawable.ic_close), contentDescription = "Clear")
                     }
@@ -228,131 +225,196 @@ private fun ListScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            if (!searching) StatusTabs(entries, tab, onTab)
-            if (!searching && tab == Status.INBOX && inboxCount >= 2) {
-                FilledTonalButton(
-                    onClick = onSort,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                ) { Text("Sort inbox one by one ($inboxCount)") }
+            if (!searching) {
+                Tabs(MainTabs, entries, tab, onTab)
+                if (tab == Status.INBOX && inboxCount >= 2) {
+                    FilledTonalButton(
+                        onClick = onSort,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    ) { Text("Sort inbox one by one ($inboxCount)") }
+                }
             }
             if (visible.isEmpty()) {
                 EmptyState(if (searching) null else tab, searchActive)
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(visible, key = { it.id }) { entry ->
-                        SwipeableEntry(
-                            entry = entry,
-                            showStatus = searchActive,
-                            onOpen = { onOpen(entry) },
-                            onSwiped = { apply(entry, it) },
-                            modifier = Modifier.animateItem(),
-                        )
-                    }
-                }
+                EntryList(
+                    entries = visible,
+                    reorderable = !searchActive && tab.isOrdered,
+                    showStatus = searchActive,
+                    onOpen = onOpen,
+                    onMove = move,
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StatusTabs(entries: List<Entry>, selected: Status, onSelect: (Status) -> Unit) {
+private fun ArchiveScreen(entries: List<Entry>, onOpen: (Entry) -> Unit, onBack: () -> Unit) {
+    val snackbar = remember { SnackbarHostState() }
+    val move = rememberMover(snackbar)
+    var tab by rememberSaveable { mutableStateOf(Status.DONE) }
+    val visible = remember(entries, tab) { ordered(entries, tab) }
+    BackHandler(onBack = onBack)
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                navigationIcon = {
+                    IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Back") }
+                },
+                title = { Text("Done & Trash", fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold) },
+            )
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            Tabs(listOf(Status.DONE, Status.TRASH), entries, tab, onSelect = { tab = it })
+            if (visible.isEmpty()) EmptyState(tab, searchActive = false)
+            else EntryList(visible, reorderable = false, showStatus = false, onOpen = onOpen, onMove = move)
+        }
+    }
+}
+
+@Composable
+private fun Tabs(tabs: List<Status>, entries: List<Entry>, selected: Status, onSelect: (Status) -> Unit) {
     Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Status.entries.forEach { status ->
+        tabs.forEach { status ->
             val count = entries.count { it.status == status }
-            val showCount = count > 0 && (status == Status.INBOX || status == Status.TODAY)
             FilterChip(
                 selected = status == selected,
                 onClick = { onSelect(status) },
-                label = { Text(if (showCount) "${status.label}  $count" else status.label) },
+                label = {
+                    Text(
+                        if (count > 0) "${status.label}  $count" else status.label,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                 ),
+                modifier = Modifier.weight(1f).height(40.dp),
             )
         }
     }
 }
 
 /**
- * Hand-rolled swipe so it only commits when dragged past half the card.
- * Fling speed is ignored on purpose: quick thumb flicks shouldn't trash anything.
+ * Cards with long-press for the move sheet. Reorderable lists also get a drag grip; the new order
+ * is shown locally while dragging and saved when the drag ends.
  */
 @Composable
-private fun SwipeableEntry(
-    entry: Entry,
+private fun EntryList(
+    entries: List<Entry>,
+    reorderable: Boolean,
     showStatus: Boolean,
-    onOpen: () -> Unit,
-    onSwiped: (SwipeAction) -> Unit,
-    modifier: Modifier = Modifier,
+    onOpen: (Entry) -> Unit,
+    onMove: (Entry, Status?) -> Unit,
 ) {
-    val right = swipeRight(entry.status)
-    val left = swipeLeft(entry.status)
-    val offset = remember { Animatable(0f) }
-    var width by remember { mutableIntStateOf(0) }
-    val threshold = width * 0.5f
-    val armed = width > 0 && abs(offset.value) >= threshold
-    val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
+    var sheetFor by remember { mutableStateOf<Entry?>(null) }
+    var localOrder by remember { mutableStateOf<List<String>?>(null) }
+    var dragging by remember { mutableStateOf(false) }
 
-    LaunchedEffect(armed) { if (armed) haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate) }
-    // In search the entry can stay listed after its status changes; slide it back in.
-    LaunchedEffect(entry.status) { offset.snapTo(0f) }
+    val shown = remember(entries, localOrder) {
+        val order = localOrder
+        if (order == null || order.toSet() != entries.map { it.id }.toSet()) entries
+        else entries.associateBy { it.id }.let { byId -> order.map { byId.getValue(it) } }
+    }
+    val currentShown by rememberUpdatedState(shown)
+    // Drop the local order once the store has caught up with it.
+    LaunchedEffect(entries, dragging) {
+        if (!dragging && localOrder == entries.map { it.id }) localOrder = null
+    }
 
-    Box(modifier.onSizeChanged { width = it.width }) {
-        val action = when {
-            offset.value > 0f -> right
-            offset.value < 0f -> left
-            else -> null
+    val listState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+        val ids = currentShown.map { it.id }.toMutableList()
+        val fromIndex = ids.indexOf(from.key)
+        val toIndex = ids.indexOf(to.key)
+        if (fromIndex >= 0 && toIndex >= 0) {
+            ids.add(toIndex, ids.removeAt(fromIndex))
+            localOrder = ids
+            haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
         }
-        if (action != null) {
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .clip(CardShape)
-                    .background(if (armed) action.color else action.color.copy(alpha = 0.35f))
-                    .padding(horizontal = 24.dp),
-                contentAlignment = if (action === right) Alignment.CenterStart else Alignment.CenterEnd,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(action.icon), contentDescription = null, tint = Color.White)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (armed) "Release: ${action.label}" else action.label,
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
-        Box(
-            Modifier
-                .offset { IntOffset(offset.value.roundToInt(), 0) }
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta -> scope.launch { offset.snapTo(offset.value + delta) } },
-                    onDragStopped = {
-                        if (abs(offset.value) >= threshold && width > 0) {
-                            val direction = sign(offset.value)
-                            offset.animateTo(direction * width)
-                            onSwiped(if (direction > 0) right else left)
-                        } else {
-                            offset.animateTo(0f)
+    }
+
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        itemsIndexed(shown, key = { _, entry -> entry.id }) { index, entry ->
+            ReorderableItem(reorderState, key = entry.id, enabled = reorderable) { isDragging ->
+                EntryCard(
+                    entry = entry,
+                    emphasis = if (reorderable) emphasisFor(index, shown.size) else null,
+                    showStatus = showStatus,
+                    onClick = { onOpen(entry) },
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        sheetFor = entry
+                    },
+                    elevation = if (isDragging) 8f else 1f,
+                    handle = if (!reorderable) null else {
+                        {
+                            IconButton(
+                                onClick = {},
+                                modifier = Modifier.draggableHandle(
+                                    onDragStarted = {
+                                        dragging = true
+                                        haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                    },
+                                    onDragStopped = {
+                                        dragging = false
+                                        localOrder?.let(EntryStore::reorder)
+                                    },
+                                ),
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.ic_drag),
+                                    contentDescription = "Drag to reorder",
+                                    tint = MaterialTheme.colorScheme.outline,
+                                )
+                            }
                         }
                     },
-                ),
-        ) {
-            EntryCard(entry, showStatus, onOpen)
+                )
+            }
         }
+        item(key = "hint") {
+            Text(
+                if (reorderable) "Hold an entry to move it · drag ⋮⋮ to reorder" else "Hold an entry to move it",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+        }
+    }
+
+    sheetFor?.let { entry ->
+        MoveSheet(
+            entry = entry,
+            onDismiss = { sheetFor = null },
+            onMove = { target ->
+                sheetFor = null
+                onMove(entry, target)
+            },
+            onEdit = {
+                sheetFor = null
+                onOpen(entry)
+            },
+        )
     }
 }
 
@@ -362,10 +424,10 @@ private fun EmptyState(tab: Status?, searchActive: Boolean) {
         searchActive -> "No matches" to "Trash isn't searched."
         tab == null -> "Search your entries" to "Type to look through everything."
         tab == Status.INBOX -> "Inbox zero" to "Tap New to get a thought out of your head."
-        tab == Status.TODAY -> "Nothing planned for today" to "Open an entry and move it to Today."
+        tab == Status.TODAY -> "Nothing planned for today" to "Hold an entry in the inbox and move it here."
         tab == Status.LATER -> "Nothing parked for later" to "Keepers and someday-maybes go here."
-        tab == Status.DONE -> "Nothing done yet" to "Drag an entry to the right to finish it."
-        else -> "Trash is empty" to "Drag an entry left to trash it. Things here can be restored."
+        tab == Status.DONE -> "Nothing done yet" to "Finished entries land here."
+        else -> "Trash is empty" to "Trashed entries wait here in case you change your mind."
     }
     Column(
         Modifier.fillMaxSize().padding(32.dp),

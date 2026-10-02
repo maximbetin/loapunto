@@ -1,12 +1,20 @@
 package com.mbk.loapunto.ui
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -17,16 +25,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.mbk.loapunto.Entry
-import com.mbk.loapunto.Priority
 import com.mbk.loapunto.Status
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -37,7 +40,6 @@ import java.util.Locale
 val CardShape = RoundedCornerShape(18.dp)
 
 private val dueFormat = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.ENGLISH)
-
 private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)
 
 fun formatTime(time: LocalTime): String = time.format(timeFormat)
@@ -62,66 +64,97 @@ fun formatAge(millis: Long): String {
     else DateUtils.getRelativeTimeSpanString(millis, now, DateUtils.MINUTE_IN_MILLIS).toString()
 }
 
+/** 1 for the top of a list fading to a faint 0.15 at the bottom; position, not urgency. */
+fun emphasisFor(index: Int, count: Int): Float =
+    if (count <= 1) 1f else 1f - 0.85f * index / (count - 1)
+
+/**
+ * @param emphasis strength of the left accent bar, or null for lists that aren't hand-ordered.
+ * @param handle trailing drag grip, supplied by reorderable lists.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EntryCard(entry: Entry, showStatus: Boolean, onClick: () -> Unit) {
+fun EntryCard(
+    entry: Entry,
+    emphasis: Float?,
+    showStatus: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    elevation: Float = 1f,
+    handle: (@Composable () -> Unit)? = null,
+) {
     val done = entry.status == Status.DONE
     Card(
-        onClick = onClick,
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation.dp),
+        modifier = modifier,
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                // First line reads as a title, the rest as body.
-                val firstBreak = entry.text.indexOf('\n')
-                val detailColor = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        ) {
+            Box(
+                Modifier
+                    .width(5.dp)
+                    .fillMaxHeight()
+                    .background(
+                        if (emphasis == null) Color.Transparent
+                        else MaterialTheme.colorScheme.primary.copy(alpha = emphasis),
+                    ),
+            )
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(start = 14.dp, end = if (handle == null) 16.dp else 0.dp, top = 14.dp, bottom = 14.dp),
+            ) {
                 Text(
-                    buildAnnotatedString {
-                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
-                            append(if (firstBreak < 0) entry.text else entry.text.substring(0, firstBreak))
-                        }
-                        // Detail lines: smaller and quieter, so the title stays scannable.
-                        if (firstBreak >= 0) withStyle(SpanStyle(fontSize = 14.sp, color = detailColor)) {
-                            append(entry.text.substring(firstBreak))
-                        }
-                    },
+                    entry.text,
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 4,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                     textDecoration = if (done) TextDecoration.LineThrough else null,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (done) 0.55f else 1f),
-                    modifier = Modifier.weight(1f),
                 )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    formatAge(entry.createdAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                when (entry.priority) {
-                    Priority.HIGH -> Pill("High", MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.onError)
-                    Priority.LOW -> Pill("Low", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-                    Priority.NORMAL -> Unit
-                }
-                entry.due?.let { due ->
-                    val overdue = !done && isOverdue(due, entry.dueTime)
-                    Pill(
-                        text = (if (overdue) "Overdue · " else "Due ") + formatDue(due, entry.dueTime),
-                        container = if (overdue) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-                        content = if (overdue) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                if (entry.notes.isNotBlank()) {
+                    Text(
+                        entry.notes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
-                if (showStatus) {
-                    Pill(
-                        entry.status.label,
-                        MaterialTheme.colorScheme.secondaryContainer,
-                        MaterialTheme.colorScheme.onSecondaryContainer,
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatAge(entry.createdAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    entry.due?.let { due ->
+                        val overdue = !done && isOverdue(due, entry.dueTime)
+                        Pill(
+                            text = (if (overdue) "Overdue · " else "Due ") + formatDue(due, entry.dueTime),
+                            container = if (overdue) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                            content = if (overdue) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    if (showStatus) {
+                        Pill(
+                            entry.status.label,
+                            MaterialTheme.colorScheme.secondaryContainer,
+                            MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
                 }
             }
+            if (handle != null) Box(Modifier.align(Alignment.CenterVertically)) { handle() }
         }
     }
 }

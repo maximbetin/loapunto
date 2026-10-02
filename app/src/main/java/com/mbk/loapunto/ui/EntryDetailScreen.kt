@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DatePicker
@@ -49,12 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mbk.loapunto.Entry
 import com.mbk.loapunto.EntryStore
-import com.mbk.loapunto.Priority
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
 import java.time.Instant
@@ -70,12 +72,14 @@ private val createdFormat = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm",
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
-    // Local copy so typing never fights the store; every change is still saved as you go.
-    var text by remember(entry.id) { mutableStateOf(entry.text) }
+    // Local copies so typing never fights the store; every change is still saved as you go.
+    var title by remember(entry.id) { mutableStateOf(entry.text) }
+    var notes by remember(entry.id) { mutableStateOf(entry.notes) }
+    val notesFocus = remember { FocusRequester() }
     val inTrash = entry.status == Status.TRASH
 
     fun close() {
-        if (text.isBlank()) EntryStore.delete(entry.id)
+        if (title.isBlank() && notes.isBlank()) EntryStore.delete(entry.id)
         onBack()
     }
     BackHandler(onBack = ::close)
@@ -93,14 +97,14 @@ fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
                 },
                 actions = {
                     if (inTrash) {
-                        IconButton(onClick = { EntryStore.update(entry.id) { it.copy(status = Status.INBOX) } }) {
+                        IconButton(onClick = { EntryStore.move(entry.id, Status.INBOX) }) {
                             Icon(painterResource(R.drawable.ic_restore), contentDescription = "Restore")
                         }
                         IconButton(onClick = { EntryStore.delete(entry.id); onBack() }) {
                             Icon(painterResource(R.drawable.ic_delete), contentDescription = "Delete for good")
                         }
                     } else {
-                        IconButton(onClick = { EntryStore.update(entry.id) { it.copy(status = Status.TRASH) }; onBack() }) {
+                        IconButton(onClick = { EntryStore.move(entry.id, Status.TRASH); onBack() }) {
                             Icon(painterResource(R.drawable.ic_delete), contentDescription = "Move to trash")
                         }
                     }
@@ -109,18 +113,40 @@ fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().imePadding()) {
-            TextField(
-                value = text,
-                onValueChange = { new ->
-                    text = new
-                    EntryStore.update(entry.id) { it.copy(text = new) }
-                },
-                placeholder = { Text("Title on the first line\nDetails, lists, anything below") },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 19.sp, lineHeight = 28.sp),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = transparentFieldColors(),
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 4.dp),
-            )
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
+                TextField(
+                    value = title,
+                    onValueChange = { new ->
+                        // Enter in the title jumps to the details instead of adding a line.
+                        val head = new.substringBefore('\n')
+                        val rest = if ('\n' in new) new.substringAfter('\n') else null
+                        title = head
+                        EntryStore.update(entry.id) { it.copy(text = head) }
+                        if (rest != null) notesFocus.requestFocus()
+                    },
+                    placeholder = { Text("Title") },
+                    textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    keyboardOptions = TextKeyboard,
+                    colors = transparentFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextField(
+                    value = notes,
+                    onValueChange = { new ->
+                        notes = new
+                        EntryStore.update(entry.id) { it.copy(notes = new) }
+                    },
+                    placeholder = { Text("Add details…") },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 17.sp,
+                        lineHeight = 26.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                    keyboardOptions = TextKeyboard,
+                    colors = transparentFieldColors(),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp).focusRequester(notesFocus),
+                )
+            }
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
@@ -138,12 +164,10 @@ fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
     }
 }
 
-/** Status, priority and due date/reminder controls, shared by the detail and sorting screens. */
+/** Status and due date/reminder controls, shared by the detail and sorting screens. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TriageControls(entry: Entry, statuses: List<Status>, onStatus: (Status) -> Unit = { status ->
-    EntryStore.update(entry.id) { it.copy(status = status) }
-}) {
+fun TriageControls(entry: Entry, statuses: List<Status>) {
     var pickingDate by rememberSaveable { mutableStateOf(false) }
     var pickingTime by rememberSaveable { mutableStateOf(false) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -152,15 +176,7 @@ fun TriageControls(entry: Entry, statuses: List<Status>, onStatus: (Status) -> U
         ControlLabel("Move to")
         ChipRow {
             statuses.forEach { status ->
-                ChoiceChip(entry.status == status, status.label) { onStatus(status) }
-            }
-        }
-    }
-    ControlLabel("Priority")
-    ChipRow {
-        Priority.entries.forEach { priority ->
-            ChoiceChip(entry.priority == priority, priority.label) {
-                EntryStore.update(entry.id) { it.copy(priority = priority) }
+                ChoiceChip(entry.status == status, status.label) { EntryStore.move(entry.id, status) }
             }
         }
     }

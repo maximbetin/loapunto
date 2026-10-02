@@ -66,12 +66,11 @@ object Reminders {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val lines = entry.text.trim().lines()
         val builder = { Notification.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_launcher_foreground) }
         val notification = builder()
-            .setContentTitle(lines.first())
-            .setContentText(lines.drop(1).joinToString(" ").ifBlank { "Reminder" })
-            .setStyle(Notification.BigTextStyle().bigText(entry.text.trim()))
+            .setContentTitle(entry.text)
+            .setContentText(entry.notes.ifBlank { "Reminder" })
+            .setStyle(Notification.BigTextStyle().bigText(entry.notes.ifBlank { "Reminder" }))
             .setContentIntent(open)
             .setAutoCancel(true)
             .setCategory(Notification.CATEGORY_REMINDER)

@@ -13,26 +13,27 @@ enum class Status(val label: String) {
     LATER("Later"),
     DONE("Done"),
     TRASH("Trash"),
+    ;
+
+    /** Inbox, Today and Later are hand-ordered lists; Done and Trash are just history. */
+    val isOrdered get() = this == INBOX || this == TODAY || this == LATER
 }
 
-/** Declared most urgent first so ordinal order sorts High to the top. */
-enum class Priority(val label: String) {
-    HIGH("High"),
-    NORMAL("Normal"),
-    LOW("Low"),
-}
-
-/** One captured thought. Everything except [text] is optional triage metadata. */
+/** One captured thought. Everything except [text] is optional. */
 data class Entry(
     val id: String = UUID.randomUUID().toString(),
+    /** The title: what you typed when capturing. */
     val text: String,
+    /** Optional details added later. */
+    val notes: String = "",
     val status: Status = Status.INBOX,
-    val priority: Priority = Priority.NORMAL,
     val due: LocalDate? = null,
     /** Only meaningful with [due]; setting it turns the due date into a reminder. */
     val dueTime: LocalTime? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt,
+    /** Position within its list, smallest first. Newer entries land on top by default. */
+    val rank: Long = -createdAt,
 ) {
     val isOpen get() = status != Status.DONE && status != Status.TRASH
 
@@ -44,30 +45,40 @@ data class Entry(
         }
 }
 
+/** Typed text becomes a title, and anything after the first line becomes details. */
+fun splitTitle(raw: String): Pair<String, String> {
+    val trimmed = raw.trim()
+    val lineBreak = trimmed.indexOf('\n')
+    return if (lineBreak < 0) trimmed to "" else trimmed.substring(0, lineBreak).trim() to trimmed.substring(lineBreak + 1).trim()
+}
+
 fun Entry.toJson(): JSONObject = JSONObject()
     .put("id", id)
     .put("text", text)
+    .put("notes", notes)
     .put("status", status.name)
-    .put("priority", priority.name)
     .put("due", due?.toString() ?: JSONObject.NULL)
     .put("dueTime", dueTime?.toString() ?: JSONObject.NULL)
     .put("createdAt", createdAt)
     .put("updatedAt", updatedAt)
+    .put("rank", rank)
 
 private fun JSONObject.optText(key: String) = optString(key).takeIf { it.isNotEmpty() && it != "null" }
 
 fun entryFromJson(json: JSONObject): Entry {
     val createdAt = json.getLong("createdAt")
-    // v0.1 had a star instead of priorities.
-    val legacyPriority = if (json.optBoolean("starred")) Priority.HIGH else Priority.NORMAL
+    // v0.1 kept details as extra lines of the text.
+    val (title, legacyNotes) = if (json.has("notes")) json.getString("text") to json.getString("notes")
+    else splitTitle(json.getString("text"))
     return Entry(
         id = json.getString("id"),
-        text = json.getString("text"),
+        text = title,
+        notes = legacyNotes,
         status = runCatching { Status.valueOf(json.getString("status")) }.getOrDefault(Status.INBOX),
-        priority = json.optText("priority")?.let { runCatching { Priority.valueOf(it) }.getOrNull() } ?: legacyPriority,
         due = json.optText("due")?.let(LocalDate::parse),
         dueTime = json.optText("dueTime")?.let(LocalTime::parse),
         createdAt = createdAt,
         updatedAt = json.optLong("updatedAt", createdAt),
+        rank = json.optLong("rank", -createdAt),
     )
 }

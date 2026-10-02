@@ -60,10 +60,9 @@ private val Dark = darkColorScheme(
     onErrorContainer = Color(0xFFFFDAD6),
 )
 
-// Swipe backgrounds: fixed so white labels stay readable in both themes.
-val SwipeDone = Color(0xFF2E7D57)
-val SwipeTrash = Color(0xFFC2412D)
-val SwipeRestore = Color(0xFF5B6475)
+// Fixed so white labels stay readable in both themes.
+val DoneGreen = Color(0xFF2E7D57)
+val DeleteRed = Color(0xFFC2412D)
 
 @Composable
 fun LoApuntoTheme(content: @Composable () -> Unit) {
