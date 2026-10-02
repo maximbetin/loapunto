@@ -116,6 +116,10 @@ fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
                             Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.move_to_trash))
                         }
                     }
+                    // Everything is already saved; this is just a clear way out.
+                    IconButton(onClick = ::close) {
+                        Icon(painterResource(R.drawable.ic_check), contentDescription = stringResource(R.string.finished), tint = MaterialTheme.colorScheme.primary)
+                    }
                 },
             )
         },

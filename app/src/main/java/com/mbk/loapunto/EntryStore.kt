@@ -53,7 +53,8 @@ object EntryStore {
     /** New captures are written straight away: the capture screen closes right after. */
     fun add(text: String): Job {
         val (title, notes) = splitTitle(text)
-        return change(immediate = true) { listOf(Entry(text = title, notes = notes)) + it }
+        val now = System.currentTimeMillis()
+        return change(immediate = true) { it + Entry(text = title, notes = notes, createdAt = now, rank = now) }
     }
 
     /** Puts back an exact copy (used by undo). */
@@ -67,18 +68,18 @@ object EntryStore {
 
     fun delete(id: String) = change { list -> list.filterNot { it.id == id } }
 
-    /** Moving to another list puts the entry at the top of it. */
+    /** Moving to another list puts the entry at the bottom of it, so things keep the order you sent them in. */
     fun move(id: String, status: Status, immediate: Boolean = false) = update(id, immediate) {
         val now = System.currentTimeMillis()
-        if (it.status == status) it else it.copy(status = status, rank = -now, movedAt = now)
+        if (it.status == status) it else it.copy(status = status, rank = now, movedAt = now)
     }
 
-    /** Moves several entries, keeping their order, to the top of another list. */
+    /** Moves several entries, keeping their order, to the bottom of another list. */
     fun moveAll(ids: List<String>, status: Status) = change { list ->
         val now = System.currentTimeMillis()
         val position = ids.withIndex().associate { (index, id) -> id to index }
         list.map { entry ->
-            position[entry.id]?.let { entry.copy(status = status, rank = -now + it, movedAt = now, updatedAt = now) } ?: entry
+            position[entry.id]?.let { entry.copy(status = status, rank = now + it, movedAt = now, updatedAt = now) } ?: entry
         }
     }
 

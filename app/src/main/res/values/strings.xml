@@ -84,6 +84,7 @@
     <string name="delete_for_good">Delete for good</string>
     <string name="move_to_trash">Move to trash</string>
     <string name="restore">Restore</string>
+    <string name="finished">Finished</string>
     <string name="back">Back</string>
     <string name="title">Title</string>
     <string name="add_details">Add details…</string>

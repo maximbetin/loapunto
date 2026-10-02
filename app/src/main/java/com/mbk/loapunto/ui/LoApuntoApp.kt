@@ -441,6 +441,14 @@ private fun EntryList(
     }
 
     val listState = rememberLazyListState()
+    // When one entry joins the bottom (a new capture), scroll down so you see it land.
+    var knownIds by remember { mutableStateOf(entries.map { it.id }.toSet()) }
+    LaunchedEffect(entries) {
+        val ids = entries.map { it.id }
+        val added = ids.filterNot { it in knownIds }
+        knownIds = ids.toSet()
+        if (added.size == 1 && ids.last() == added[0]) listState.animateScrollToItem(ids.lastIndex)
+    }
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         val ids = currentShown.map { it.id }.toMutableList()
         val fromIndex = ids.indexOf(from.key)

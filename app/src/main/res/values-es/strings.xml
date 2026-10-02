@@ -88,6 +88,7 @@
     <string name="delete_for_good">Borrar para siempre</string>
     <string name="move_to_trash">Mover a la papelera</string>
     <string name="restore">Restaurar</string>
+    <string name="finished">Listo</string>
     <string name="back">Atrás</string>
     <string name="title">Título</string>
     <string name="add_details">Añadir detalles…</string>

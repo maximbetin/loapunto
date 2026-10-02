@@ -70,7 +70,20 @@ private fun MoveButton(target: Status?, modifier: Modifier, onClick: () -> Unit)
     val big = modifier.height(56.dp)
     when (target) {
         Status.TODAY -> Button(onClick, big) { Text(stringResource(R.string.today)) }
-        Status.LATER, Status.INBOX -> FilledTonalButton(onClick, big) { Text(stringResource(target.label)) }
+        // Later is parked (calm blue); Inbox is plain, like a fresh note.
+        Status.LATER -> FilledTonalButton(
+            onClick,
+            big,
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            ),
+        ) { Text(stringResource(R.string.later)) }
+        Status.INBOX -> OutlinedButton(
+            onClick,
+            big,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+        ) { Text(stringResource(R.string.inbox)) }
         Status.DONE -> Button(
             onClick,
             big,
