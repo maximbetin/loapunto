@@ -21,10 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mbk.loapunto.Entry
+import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
 
 /** Big, thumb-sized destinations. A null target means "delete for good" (only offered from Trash). */
@@ -46,7 +48,7 @@ fun MoveSheet(entry: Entry, onDismiss: () -> Unit, onMove: (Status?) -> Unit, on
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Currently in ${entry.status.label}",
+                stringResource(R.string.currently_in, stringResource(entry.status.label)),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -58,7 +60,7 @@ fun MoveSheet(entry: Entry, onDismiss: () -> Unit, onMove: (Status?) -> Unit, on
                 }
                 Spacer(Modifier.height(10.dp))
             }
-            TextButton(onClick = onEdit, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Open and edit") }
+            TextButton(onClick = onEdit, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(stringResource(R.string.open_and_edit)) }
         }
     }
 }
@@ -67,22 +69,22 @@ fun MoveSheet(entry: Entry, onDismiss: () -> Unit, onMove: (Status?) -> Unit, on
 private fun MoveButton(target: Status?, modifier: Modifier, onClick: () -> Unit) {
     val big = modifier.height(56.dp)
     when (target) {
-        Status.TODAY -> Button(onClick, big) { Text("Today") }
-        Status.LATER, Status.INBOX -> FilledTonalButton(onClick, big) { Text(target.label) }
+        Status.TODAY -> Button(onClick, big) { Text(stringResource(R.string.today)) }
+        Status.LATER, Status.INBOX -> FilledTonalButton(onClick, big) { Text(stringResource(target.label)) }
         Status.DONE -> Button(
             onClick,
             big,
             colors = ButtonDefaults.buttonColors(containerColor = DoneGreen, contentColor = Color.White),
-        ) { Text("Done") }
+        ) { Text(stringResource(R.string.done)) }
         Status.TRASH -> OutlinedButton(
             onClick,
             big,
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        ) { Text("Trash") }
+        ) { Text(stringResource(R.string.trash)) }
         null -> Button(
             onClick,
             big,
             colors = ButtonDefaults.buttonColors(containerColor = DeleteRed, contentColor = Color.White),
-        ) { Text("Delete for good") }
+        ) { Text(stringResource(R.string.delete_for_good)) }
     }
 }

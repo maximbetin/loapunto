@@ -45,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,11 +76,11 @@ fun SortInboxScreen(entries: List<Entry>, onExit: () -> Unit) {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = {
-                    IconButton(onClick = onExit) { Icon(painterResource(R.drawable.ic_close), contentDescription = "Stop sorting") }
+                    IconButton(onClick = onExit) { Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.stop_sorting)) }
                 },
                 title = {
                     Text(
-                        if (current == null) "Sorted" else "${handled + 1} of $total",
+                        if (current == null) stringResource(R.string.sorted) else stringResource(R.string.n_of_total, handled + 1, total),
                         fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold,
                     )
@@ -131,7 +133,7 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp).padding(4.dp),
                 )
                 Text(
-                    "Captured " + formatAge(entry.createdAt) + " · tap the text to tidy it up",
+                    stringResource(R.string.captured_tidy, formatAge(entry.createdAt)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
@@ -144,20 +146,20 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
             Modifier.navigationBarsPadding().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Where does it go?", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.where_does_it_go), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { send(Status.TODAY) }, modifier = Modifier.weight(1f)) { Text("Today") }
-                FilledTonalButton(onClick = { send(Status.LATER) }, modifier = Modifier.weight(1f)) { Text("Later") }
+                Button(onClick = { send(Status.TODAY) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.today)) }
+                FilledTonalButton(onClick = { send(Status.LATER) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.later)) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { send(Status.DONE) }, modifier = Modifier.weight(1f)) { Text("Already done") }
+                OutlinedButton(onClick = { send(Status.DONE) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.already_done)) }
                 OutlinedButton(
                     onClick = { send(Status.TRASH) },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.weight(1f),
-                ) { Text("Trash") }
+                ) { Text(stringResource(R.string.trash)) }
             }
-            TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Skip for now") }
+            TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(stringResource(R.string.skip_for_now)) }
         }
     }
 }
@@ -169,16 +171,16 @@ private fun AllSorted(skippedCount: Int, onExit: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("Head cleared", style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Serif)
+        Text(stringResource(R.string.head_cleared), style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Serif)
         Spacer(Modifier.height(8.dp))
         Text(
-            if (skippedCount == 0) "Everything in the inbox has a place now."
-            else "$skippedCount skipped — they're still waiting in the inbox.",
+            if (skippedCount == 0) stringResource(R.string.all_sorted)
+            else pluralStringResource(R.plurals.skipped_waiting, skippedCount, skippedCount),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onExit) { Text("Back to list") }
+        Button(onClick = onExit) { Text(stringResource(R.string.back_to_list)) }
     }
 }

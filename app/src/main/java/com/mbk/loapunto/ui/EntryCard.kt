@@ -1,5 +1,6 @@
 package com.mbk.loapunto.ui
 
+import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -24,43 +25,55 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mbk.loapunto.Checklist
 import com.mbk.loapunto.Entry
+import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 val CardShape = RoundedCornerShape(18.dp)
 
-private val dueFormat = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.ENGLISH)
-private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)
+/** A date pattern in the phone's language and word order, from a skeleton like "EEEMMMd". */
+fun localFormat(skeleton: String): DateTimeFormatter =
+    DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(Locale.getDefault(), skeleton))
+
+private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
 
 fun formatTime(time: LocalTime): String = time.format(timeFormat)
 
+@Composable
 fun formatDue(date: LocalDate, time: LocalTime? = null): String {
     val today = LocalDate.now()
     val day = when (date) {
-        today -> "Today"
-        today.plusDays(1) -> "Tomorrow"
-        today.minusDays(1) -> "Yesterday"
-        else -> date.format(dueFormat)
+        today -> stringResource(R.string.today)
+        today.plusDays(1) -> stringResource(R.string.tomorrow)
+        today.minusDays(1) -> stringResource(R.string.yesterday)
+        else -> date.format(localFormat("EEEMMMd"))
     }
     return if (time == null) day else "$day ${formatTime(time)}"
 }
 
+fun startOfToday(): Long = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
 fun isOverdue(date: LocalDate, time: LocalTime?): Boolean =
     if (time == null) date.isBefore(LocalDate.now()) else LocalDateTime.of(date, time).isBefore(LocalDateTime.now())
 
+@Composable
 fun formatAge(millis: Long): String {
     val now = System.currentTimeMillis()
-    return if (now - millis < DateUtils.MINUTE_IN_MILLIS) "just now"
+    return if (now - millis < DateUtils.MINUTE_IN_MILLIS) stringResource(R.string.just_now)
     else DateUtils.getRelativeTimeSpanString(millis, now, DateUtils.MINUTE_IN_MILLIS).toString()
 }
 
@@ -85,6 +98,8 @@ fun EntryCard(
     handle: (@Composable () -> Unit)? = null,
 ) {
     val done = entry.status == Status.DONE
+    // Untouched for a month: faded, but still clearly there.
+    val fade = if (entry.isStale()) 0.55f else 1f
     Card(
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
@@ -109,6 +124,7 @@ fun EntryCard(
             Column(
                 Modifier
                     .weight(1f)
+                    .alpha(fade)
                     .padding(start = 14.dp, end = if (handle == null) 16.dp else 0.dp, top = 14.dp, bottom = 14.dp),
             ) {
                 Text(
@@ -122,7 +138,7 @@ fun EntryCard(
                 )
                 if (entry.notes.isNotBlank()) {
                     Text(
-                        entry.notes,
+                        Checklist.preview(entry.notes),
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -140,14 +156,14 @@ fun EntryCard(
                     entry.due?.let { due ->
                         val overdue = !done && isOverdue(due, entry.dueTime)
                         Pill(
-                            text = (if (overdue) "Overdue · " else "Due ") + formatDue(due, entry.dueTime),
+                            text = stringResource(if (overdue) R.string.overdue else R.string.due, formatDue(due, entry.dueTime)),
                             container = if (overdue) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
                             content = if (overdue) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                     if (showStatus) {
                         Pill(
-                            entry.status.label,
+                            stringResource(entry.status.label),
                             MaterialTheme.colorScheme.secondaryContainer,
                             MaterialTheme.colorScheme.onSecondaryContainer,
                         )

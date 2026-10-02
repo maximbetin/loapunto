@@ -1,11 +1,16 @@
 package com.mbk.loapunto.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +22,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -30,7 +38,9 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -48,8 +58,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mbk.loapunto.Entry
 import com.mbk.loapunto.EntryStore
+import com.mbk.loapunto.Nudge
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
 import kotlinx.coroutines.launch
@@ -80,6 +95,18 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
     var sorting by rememberSaveable { mutableStateOf(false) }
     var archive by rememberSaveable { mutableStateOf(false) }
     val open = openId?.let { id -> entries.firstOrNull { it.id == id } }
+
+    // The daily nudge is on by default, so ask for notifications once. Android stops asking after a "no".
+    val context = LocalContext.current
+    var askedNotifications by rememberSaveable { mutableStateOf(false) }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(Unit) {
+        val granted = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (!askedNotifications && !granted && Nudge.time(context) != null) {
+            askedNotifications = true
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     LaunchedEffect(openRequest) {
         if (openRequest != null) {
@@ -117,18 +144,19 @@ fun LoApuntoApp(openRequest: String?, onOpenHandled: () -> Unit, onCapture: () -
 @Composable
 private fun rememberMover(snackbar: SnackbarHostState): (Entry, Status?) -> Unit {
     val scope = rememberCoroutineScope()
-    return remember(snackbar, scope) {
+    val res = LocalResources.current
+    return remember(snackbar, scope, res) {
         { entry, target ->
             if (target == null) EntryStore.delete(entry.id) else EntryStore.move(entry.id, target)
             val message = when (target) {
-                null -> "Deleted for good"
-                Status.DONE -> "Marked done"
-                Status.TRASH -> "Moved to trash"
-                else -> "Moved to ${target.label}"
+                null -> res.getString(R.string.deleted_for_good)
+                Status.DONE -> res.getString(R.string.marked_done)
+                Status.TRASH -> res.getString(R.string.moved_to_trash)
+                else -> res.getString(R.string.moved_to, res.getString(target.label))
             }
             scope.launch {
                 snackbar.currentSnackbarData?.dismiss()
-                val result = snackbar.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Short)
+                val result = snackbar.showSnackbar(message, res.getString(R.string.undo), duration = SnackbarDuration.Short)
                 if (result == SnackbarResult.ActionPerformed) EntryStore.upsert(entry)
             }
         }
@@ -152,10 +180,14 @@ private fun ListScreen(
     onArchive: () -> Unit,
     onCapture: () -> Unit,
 ) {
+    val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val move = rememberMover(snackbar)
+    val (backUp, restore) = rememberBackup(snackbar)
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var menuOpen by remember { mutableStateOf(false) }
+    var nudgeDialog by rememberSaveable { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
 
     val searchActive = searching && query.isNotBlank()
@@ -167,6 +199,10 @@ private fun ListScreen(
         } else ordered(entries, tab)
     }
     val inboxCount = entries.count { it.status == Status.INBOX }
+    val todayStart = startOfToday()
+    val doneToday = entries.count { it.status == Status.DONE && it.movedAt >= todayStart }
+    // Today entries that were put there on an earlier day.
+    val leftOvers = if (tab == Status.TODAY && !searching) visible.filter { it.movedAt < todayStart } else emptyList()
 
     fun closeSearch() {
         searching = false
@@ -182,7 +218,7 @@ private fun ListScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = {
                     if (searching) IconButton(onClick = ::closeSearch) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Close search")
+                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.close_search))
                     }
                 },
                 title = {
@@ -190,26 +226,62 @@ private fun ListScreen(
                         TextField(
                             value = query,
                             onValueChange = { query = it },
-                            placeholder = { Text("Search everything") },
+                            placeholder = { Text(stringResource(R.string.search_everything)) },
                             singleLine = true,
                             colors = transparentFieldColors(),
                             modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
                         )
                         LaunchedEffect(Unit) { searchFocus.requestFocus() }
                     } else {
-                        Text("LoApunto", fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
+                        Column {
+                            Text(stringResource(R.string.app_name), fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
+                            if (doneToday > 0) {
+                                Text(
+                                    pluralStringResource(R.plurals.done_today, doneToday, doneToday),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = DoneGreen,
+                                )
+                            }
+                        }
                     }
                 },
                 actions = {
                     if (!searching) {
                         IconButton(onClick = { searching = true }) {
-                            Icon(painterResource(R.drawable.ic_search), contentDescription = "Search")
+                            Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.search))
                         }
-                        IconButton(onClick = onArchive) {
-                            Icon(painterResource(R.drawable.ic_archive), contentDescription = "Done and trash")
+                        Box {
+                            IconButton(onClick = { menuOpen = true }) {
+                                Icon(painterResource(R.drawable.ic_more), contentDescription = stringResource(R.string.more))
+                            }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.done_and_trash)) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.ic_archive), contentDescription = null) },
+                                    onClick = { menuOpen = false; onArchive() },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(R.string.daily_nudge) + " · " +
+                                                (Nudge.time(context)?.let(::formatTime) ?: stringResource(R.string.off)),
+                                        )
+                                    },
+                                    leadingIcon = { Icon(painterResource(R.drawable.ic_event), contentDescription = null) },
+                                    onClick = { menuOpen = false; nudgeDialog = true },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.back_up)) },
+                                    onClick = { menuOpen = false; backUp() },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.restore_backup)) },
+                                    onClick = { menuOpen = false; restore() },
+                                )
+                            }
                         }
                     } else if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
-                        Icon(painterResource(R.drawable.ic_close), contentDescription = "Clear")
+                        Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.clear))
                     }
                 },
             )
@@ -218,7 +290,7 @@ private fun ListScreen(
             if (!searching) ExtendedFloatingActionButton(
                 onClick = onCapture,
                 icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
-                text = { Text("New") },
+                text = { Text(stringResource(R.string.new_button)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             )
@@ -231,7 +303,14 @@ private fun ListScreen(
                     FilledTonalButton(
                         onClick = onSort,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    ) { Text("Sort inbox one by one ($inboxCount)") }
+                    ) { Text(stringResource(R.string.sort_inbox, inboxCount)) }
+                }
+                if (leftOvers.isNotEmpty()) {
+                    LeftOverBar(
+                        count = leftOvers.size,
+                        onKeep = { EntryStore.keepForToday(leftOvers.map { it.id }) },
+                        onLater = { EntryStore.moveAll(leftOvers.map { it.id }, Status.LATER) },
+                    )
                 }
             }
             if (visible.isEmpty()) {
@@ -245,6 +324,29 @@ private fun ListScreen(
                     onMove = move,
                 )
             }
+        }
+    }
+
+    if (nudgeDialog) NudgeDialog(onDismiss = { nudgeDialog = false })
+}
+
+/** "2 left over [Keep] [Later]": yesterday's Today, without the guilt pile. */
+@Composable
+private fun LeftOverBar(count: Int, onKeep: () -> Unit, onLater: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                pluralStringResource(R.plurals.left_over, count, count),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onKeep) { Text(stringResource(R.string.keep)) }
+            TextButton(onClick = onLater) { Text(stringResource(R.string.later)) }
         }
     }
 }
@@ -265,9 +367,11 @@ private fun ArchiveScreen(entries: List<Entry>, onOpen: (Entry) -> Unit, onBack:
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Back") }
+                    IconButton(onClick = onBack) {
+                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back))
+                    }
                 },
-                title = { Text("Done & Trash", fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.done_and_trash), fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold) },
             )
         },
     ) { padding ->
@@ -287,12 +391,13 @@ private fun Tabs(tabs: List<Status>, entries: List<Entry>, selected: Status, onS
     ) {
         tabs.forEach { status ->
             val count = entries.count { it.status == status }
+            val label = stringResource(status.label)
             FilterChip(
                 selected = status == selected,
                 onClick = { onSelect(status) },
                 label = {
                     Text(
-                        if (count > 0) "${status.label}  $count" else status.label,
+                        if (count > 0) "$label  $count" else label,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -382,7 +487,7 @@ private fun EntryList(
                             ) {
                                 Icon(
                                     painterResource(R.drawable.ic_drag),
-                                    contentDescription = "Drag to reorder",
+                                    contentDescription = stringResource(R.string.drag_to_reorder),
                                     tint = MaterialTheme.colorScheme.outline,
                                 )
                             }
@@ -393,7 +498,7 @@ private fun EntryList(
         }
         item(key = "hint") {
             Text(
-                if (reorderable) "Hold an entry to move it · drag ⋮⋮ to reorder" else "Hold an entry to move it",
+                stringResource(if (reorderable) R.string.hint_reorder else R.string.hint_hold),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 textAlign = TextAlign.Center,
@@ -421,23 +526,28 @@ private fun EntryList(
 @Composable
 private fun EmptyState(tab: Status?, searchActive: Boolean) {
     val (title, hint) = when {
-        searchActive -> "No matches" to "Trash isn't searched."
-        tab == null -> "Search your entries" to "Type to look through everything."
-        tab == Status.INBOX -> "Inbox zero" to "Tap New to get a thought out of your head."
-        tab == Status.TODAY -> "Nothing planned for today" to "Hold an entry in the inbox and move it here."
-        tab == Status.LATER -> "Nothing parked for later" to "Keepers and someday-maybes go here."
-        tab == Status.DONE -> "Nothing done yet" to "Finished entries land here."
-        else -> "Trash is empty" to "Trashed entries wait here in case you change your mind."
+        searchActive -> R.string.empty_search to R.string.empty_search_hint
+        tab == null -> R.string.empty_searching to R.string.empty_searching_hint
+        tab == Status.INBOX -> R.string.empty_inbox to R.string.empty_inbox_hint
+        tab == Status.TODAY -> R.string.empty_today to R.string.empty_today_hint
+        tab == Status.LATER -> R.string.empty_later to R.string.empty_later_hint
+        tab == Status.DONE -> R.string.empty_done to R.string.empty_done_hint
+        else -> R.string.empty_trash to R.string.empty_trash_hint
     }
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Serif, textAlign = TextAlign.Center)
+        Text(
+            stringResource(title),
+            style = MaterialTheme.typography.titleLarge,
+            fontFamily = FontFamily.Serif,
+            textAlign = TextAlign.Center,
+        )
         Spacer(Modifier.height(8.dp))
         Text(
-            hint,
+            stringResource(hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

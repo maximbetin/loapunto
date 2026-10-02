@@ -20,6 +20,7 @@ class EntryJsonTest {
             createdAt = 1_000,
             updatedAt = 2_000,
             rank = 42,
+            movedAt = 1_500,
         )
         assertEquals(entry, entryFromJson(JSONObject(entry.toJson().toString())))
     }

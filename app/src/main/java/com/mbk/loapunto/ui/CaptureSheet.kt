@@ -1,6 +1,11 @@
 package com.mbk.loapunto.ui
 
+import android.content.Context
+import android.content.Intent
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,6 +24,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,12 +45,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mbk.loapunto.R
 
 /**
  * Bottom card over a dim scrim. Tapping outside or going back keeps what you typed;
@@ -55,6 +67,14 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
     var savedCount by rememberSaveable { mutableIntStateOf(0) }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val speech = remember { speechIntent(context) }
+    val listen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let { heard ->
+            text = listOf(text.trimEnd(), heard.trim()).filter { it.isNotEmpty() }.joinToString(" ")
+        }
+        focus.requestFocus()
+    }
 
     fun saveCurrent() {
         if (text.isNotBlank()) onSave(text.trim())
@@ -90,7 +110,7 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
             Column(Modifier.navigationBarsPadding().padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "New entry",
+                        stringResource(R.string.new_entry),
                         style = MaterialTheme.typography.titleLarge,
                         fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold,
@@ -98,16 +118,25 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
                     Spacer(Modifier.weight(1f))
                     if (savedCount > 0) {
                         Text(
-                            "$savedCount saved",
+                            pluralStringResource(R.plurals.n_saved, savedCount, savedCount),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
+                    }
+                    if (speech != null) {
+                        IconButton(onClick = { listen.launch(speech) }) {
+                            Icon(
+                                painterResource(R.drawable.ic_mic),
+                                contentDescription = stringResource(R.string.dictate),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 }
                 TextField(
                     value = text,
                     onValueChange = { text = it },
-                    placeholder = { Text("What's on your mind?") },
+                    placeholder = { Text(stringResource(R.string.capture_placeholder)) },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
                     keyboardOptions = TextKeyboard,
                     colors = transparentFieldColors(),
@@ -121,7 +150,7 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onClose) { Text("Cancel") }
+                    TextButton(onClick = onClose) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.weight(1f))
                     TextButton(
                         enabled = text.isNotBlank(),
@@ -129,13 +158,27 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
                             saveCurrent()
                             savedCount++
                         },
-                    ) { Text("Add another") }
+                    ) { Text(stringResource(R.string.add_another)) }
                     Spacer(Modifier.width(8.dp))
-                    Button(enabled = text.isNotBlank(), onClick = ::keepAndClose) { Text("Save") }
+                    Button(enabled = text.isNotBlank(), onClick = ::keepAndClose) { Text(stringResource(R.string.save)) }
                 }
             }
         }
     }
+}
+
+private const val FUTO_VOICE = "org.futo.voiceinput"
+
+/**
+ * Speech goes to FUTO Voice Input (offline Whisper) when it's installed, otherwise to whatever
+ * speech app the phone has. Null when there's none, and the mic button is hidden.
+ */
+private fun speechIntent(context: Context): Intent? {
+    val generic = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+    val futo = Intent(generic).setPackage(FUTO_VOICE)
+    return listOf(futo, generic).firstOrNull { context.packageManager.queryIntentActivities(it, 0).isNotEmpty() }
 }
 
 @Composable

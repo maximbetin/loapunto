@@ -68,8 +68,34 @@ object EntryStore {
     fun delete(id: String) = change { list -> list.filterNot { it.id == id } }
 
     /** Moving to another list puts the entry at the top of it. */
-    fun move(id: String, status: Status) = update(id) {
-        if (it.status == status) it else it.copy(status = status, rank = -System.currentTimeMillis())
+    fun move(id: String, status: Status, immediate: Boolean = false) = update(id, immediate) {
+        val now = System.currentTimeMillis()
+        if (it.status == status) it else it.copy(status = status, rank = -now, movedAt = now)
+    }
+
+    /** Moves several entries, keeping their order, to the top of another list. */
+    fun moveAll(ids: List<String>, status: Status) = change { list ->
+        val now = System.currentTimeMillis()
+        val position = ids.withIndex().associate { (index, id) -> id to index }
+        list.map { entry ->
+            position[entry.id]?.let { entry.copy(status = status, rank = -now + it, movedAt = now, updatedAt = now) } ?: entry
+        }
+    }
+
+    /** Today's left-overs that you chose to keep count as today's again. */
+    fun keepForToday(ids: List<String>) = change { list ->
+        val now = System.currentTimeMillis()
+        list.map { if (it.id in ids) it.copy(movedAt = now) else it }
+    }
+
+    fun exportJson(): String = JSONArray().apply { _entries.value.forEach { put(it.toJson()) } }.toString(2)
+
+    /** Adds the entries from a backup, replacing ones with the same id. Returns how many it read. */
+    fun importJson(json: String): Int {
+        val array = JSONArray(json)
+        val imported = List(array.length()) { entryFromJson(array.getJSONObject(it)) }.associateBy { it.id }
+        change(immediate = true) { list -> list.filterNot { it.id in imported } + imported.values }
+        return imported.size
     }
 
     /** Applies a new order to one list, reusing that list's existing rank values. */

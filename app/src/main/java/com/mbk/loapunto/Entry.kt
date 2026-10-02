@@ -1,5 +1,6 @@
 package com.mbk.loapunto
 
+import androidx.annotation.StringRes
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -7,24 +8,26 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
-enum class Status(val label: String) {
-    INBOX("Inbox"),
-    TODAY("Today"),
-    LATER("Later"),
-    DONE("Done"),
-    TRASH("Trash"),
+enum class Status(@param:StringRes val label: Int) {
+    INBOX(R.string.inbox),
+    TODAY(R.string.today),
+    LATER(R.string.later),
+    DONE(R.string.done),
+    TRASH(R.string.trash),
     ;
 
     /** Inbox, Today and Later are hand-ordered lists; Done and Trash are just history. */
     val isOrdered get() = this == INBOX || this == TODAY || this == LATER
 }
 
+private const val STALE_AFTER_MILLIS = 30L * 24 * 60 * 60 * 1000
+
 /** One captured thought. Everything except [text] is optional. */
 data class Entry(
     val id: String = UUID.randomUUID().toString(),
     /** The title: what you typed when capturing. */
     val text: String,
-    /** Optional details added later. */
+    /** Optional details added later; lines starting with "[ ]" or "[x]" are checklist items. */
     val notes: String = "",
     val status: Status = Status.INBOX,
     val due: LocalDate? = null,
@@ -34,8 +37,13 @@ data class Entry(
     val updatedAt: Long = createdAt,
     /** Position within its list, smallest first. Newer entries land on top by default. */
     val rank: Long = -createdAt,
+    /** When it last changed list: drives "done today" and Today's left-overs. */
+    val movedAt: Long = createdAt,
 ) {
     val isOpen get() = status != Status.DONE && status != Status.TRASH
+
+    /** Open but untouched for a month: shown faded, never hidden. */
+    fun isStale(now: Long = System.currentTimeMillis()) = isOpen && now - updatedAt > STALE_AFTER_MILLIS
 
     /** When to notify, or null if this entry has no pending reminder. */
     val reminderAt: Long?
@@ -62,11 +70,13 @@ fun Entry.toJson(): JSONObject = JSONObject()
     .put("createdAt", createdAt)
     .put("updatedAt", updatedAt)
     .put("rank", rank)
+    .put("movedAt", movedAt)
 
 private fun JSONObject.optText(key: String) = optString(key).takeIf { it.isNotEmpty() && it != "null" }
 
 fun entryFromJson(json: JSONObject): Entry {
     val createdAt = json.getLong("createdAt")
+    val updatedAt = json.optLong("updatedAt", createdAt)
     // v0.1 kept details as extra lines of the text.
     val (title, legacyNotes) = if (json.has("notes")) json.getString("text") to json.getString("notes")
     else splitTitle(json.getString("text"))
@@ -78,7 +88,49 @@ fun entryFromJson(json: JSONObject): Entry {
         due = json.optText("due")?.let(LocalDate::parse),
         dueTime = json.optText("dueTime")?.let(LocalTime::parse),
         createdAt = createdAt,
-        updatedAt = json.optLong("updatedAt", createdAt),
+        updatedAt = updatedAt,
         rank = json.optLong("rank", -createdAt),
+        movedAt = json.optLong("movedAt", updatedAt),
     )
+}
+
+/**
+ * Checklists are plain text: "[ ] milk" / "[x] eggs". Nothing is converted while you type;
+ * only the explicit "Checklist" button and ticking a box touch the text.
+ */
+object Checklist {
+    private val item = Regex("""^\s*\[([ xX])]\s?(.*)$""")
+
+    /** One line of the details: [checked] is null for ordinary text. */
+    data class Line(val checked: Boolean?, val text: String)
+
+    fun parse(notes: String): List<Line> = notes.lines().map { line ->
+        item.matchEntire(line)?.let { Line(it.groupValues[1] != " ", it.groupValues[2]) } ?: Line(null, line)
+    }
+
+    fun has(notes: String) = notes.lines().any { item.matches(it) }
+
+    fun toggle(notes: String, index: Int): String = notes.lines().mapIndexed { i, line ->
+        val match = item.matchEntire(line)
+        if (i != index || match == null) line
+        else (if (match.groupValues[1] == " ") "[x] " else "[ ] ") + match.groupValues[2]
+    }.joinToString("\n")
+
+    /** Every non-blank line becomes an unticked item; existing items and their ticks are kept. */
+    fun from(notes: String): String = notes.lines().filter { it.isNotBlank() }.joinToString("\n") { line ->
+        if (item.matches(line)) line.trim()
+        else "[ ] " + line.trim().removePrefix("- ").removePrefix("* ").removePrefix("• ").trim()
+    }
+
+    fun add(notes: String, text: String): String =
+        (if (notes.isBlank()) "" else notes.trimEnd() + "\n") + "[ ] " + text.trim()
+
+    /** For card previews: boxes become ○ and ✓. */
+    fun preview(notes: String): String = parse(notes).joinToString("\n") { line ->
+        when (line.checked) {
+            null -> line.text
+            true -> "✓ " + line.text
+            false -> "○ " + line.text
+        }
+    }
 }

@@ -1,0 +1,141 @@
+<resources>
+    <string name="launcher_new">LoApunto +</string>
+    <string name="new_entry">Nueva nota</string>
+
+    <!-- Lists -->
+    <string name="inbox">Entrada</string>
+    <string name="today">Hoy</string>
+    <string name="later">Luego</string>
+    <string name="done">Hecho</string>
+    <string name="trash">Papelera</string>
+    <string name="done_and_trash">Hecho y papelera</string>
+
+    <!-- Capture -->
+    <string name="capture_placeholder">¿Qué tienes en mente?</string>
+    <plurals name="n_saved">
+        <item quantity="one">%d guardada</item>
+        <item quantity="many">%d guardadas</item>
+        <item quantity="other">%d guardadas</item>
+    </plurals>
+    <string name="dictate">Dictar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="add_another">Otra más</string>
+    <string name="save">Guardar</string>
+
+    <!-- Main screen -->
+    <string name="search">Buscar</string>
+    <string name="close_search">Cerrar búsqueda</string>
+    <string name="search_everything">Buscar en todo</string>
+    <string name="clear">Borrar</string>
+    <string name="more">Más</string>
+    <string name="new_button">Nueva</string>
+    <string name="sort_inbox">Ordenar la entrada una a una (%d)</string>
+    <string name="keep">Mantener</string>
+    <string name="off">apagado</string>
+    <string name="back_up">Copia de seguridad</string>
+    <string name="restore_backup">Restaurar copia</string>
+    <string name="drag_to_reorder">Arrastra para reordenar</string>
+    <string name="hint_reorder">Mantén pulsada una nota para moverla · arrastra ⋮⋮ para reordenar</string>
+    <string name="hint_hold">Mantén pulsada una nota para moverla</string>
+    <string name="undo">Deshacer</string>
+    <string name="deleted_for_good">Borrada para siempre</string>
+    <string name="marked_done">Hecha</string>
+    <string name="moved_to_trash">A la papelera</string>
+    <string name="moved_to">Movida a %s</string>
+    <plurals name="done_today">
+        <item quantity="one">%d hecha hoy</item>
+        <item quantity="many">%d hechas hoy</item>
+        <item quantity="other">%d hechas hoy</item>
+    </plurals>
+    <plurals name="left_over">
+        <item quantity="one">%d pendiente de antes</item>
+        <item quantity="many">%d pendientes de antes</item>
+        <item quantity="other">%d pendientes de antes</item>
+    </plurals>
+
+    <string name="empty_search">Sin resultados</string>
+    <string name="empty_search_hint">La papelera no se busca.</string>
+    <string name="empty_searching">Busca en tus notas</string>
+    <string name="empty_searching_hint">Escribe para buscar en todo.</string>
+    <string name="empty_inbox">Entrada vacía</string>
+    <string name="empty_inbox_hint">Toca Nueva para sacarte una idea de la cabeza.</string>
+    <string name="empty_today">Nada para hoy</string>
+    <string name="empty_today_hint">Mantén pulsada una nota de la entrada y muévela aquí.</string>
+    <string name="empty_later">Nada aparcado para luego</string>
+    <string name="empty_later_hint">Lo que quieres guardar y los «algún día» van aquí.</string>
+    <string name="empty_done">Nada hecho todavía</string>
+    <string name="empty_done_hint">Las notas terminadas acaban aquí.</string>
+    <string name="empty_trash">La papelera está vacía</string>
+    <string name="empty_trash_hint">Lo que tiras espera aquí por si cambias de idea.</string>
+
+    <!-- Backup -->
+    <plurals name="backed_up">
+        <item quantity="one">%d nota guardada en la copia</item>
+        <item quantity="many">%d notas guardadas en la copia</item>
+        <item quantity="other">%d notas guardadas en la copia</item>
+    </plurals>
+    <plurals name="restored">
+        <item quantity="one">%d nota restaurada</item>
+        <item quantity="many">%d notas restauradas</item>
+        <item quantity="other">%d notas restauradas</item>
+    </plurals>
+    <string name="backup_failed">No se pudo guardar la copia</string>
+    <string name="restore_failed">Ese archivo no es una copia de LoApunto</string>
+
+    <!-- Move sheet and detail -->
+    <string name="currently_in">Ahora en %s</string>
+    <string name="open_and_edit">Abrir y editar</string>
+    <string name="delete_for_good">Borrar para siempre</string>
+    <string name="move_to_trash">Mover a la papelera</string>
+    <string name="restore">Restaurar</string>
+    <string name="back">Atrás</string>
+    <string name="title">Título</string>
+    <string name="add_details">Añadir detalles…</string>
+    <string name="make_checklist">Convertir en lista</string>
+    <string name="show_ticks">Ver como lista</string>
+    <string name="edit_as_text">Editar como texto</string>
+    <string name="add_item">Añadir elemento</string>
+    <string name="move_to">Mover a</string>
+    <string name="due">Para %s</string>
+    <string name="overdue">Vencida · %s</string>
+    <string name="add_due_date">Añadir fecha</string>
+    <string name="remind_at">Aviso %s</string>
+    <string name="remind_me">Avísame</string>
+    <string name="remind_me_at">Avísame a las</string>
+    <string name="no_reminder">Sin aviso</string>
+    <string name="clear_due_date">Quitar fecha</string>
+    <string name="set">Aceptar</string>
+    <string name="captured_at">Apuntada %s</string>
+    <string name="tomorrow">Mañana</string>
+    <string name="yesterday">Ayer</string>
+    <string name="just_now">ahora mismo</string>
+
+    <!-- Sorting -->
+    <string name="stop_sorting">Dejar de ordenar</string>
+    <string name="sorted">Ordenado</string>
+    <string name="n_of_total">%1$d de %2$d</string>
+    <string name="captured_tidy">Apuntada %s · toca el texto para pulirlo</string>
+    <string name="where_does_it_go">¿Dónde va?</string>
+    <string name="already_done">Ya hecha</string>
+    <string name="skip_for_now">Saltar por ahora</string>
+    <string name="head_cleared">Cabeza despejada</string>
+    <string name="all_sorted">Todo lo de la entrada tiene su sitio.</string>
+    <plurals name="skipped_waiting">
+        <item quantity="one">%d saltada. Sigue esperando en la entrada.</item>
+        <item quantity="many">%d saltadas. Siguen esperando en la entrada.</item>
+        <item quantity="other">%d saltadas. Siguen esperando en la entrada.</item>
+    </plurals>
+    <string name="back_to_list">Volver a la lista</string>
+
+    <!-- Notifications -->
+    <string name="channel_reminders">Avisos</string>
+    <string name="reminder">Aviso</string>
+    <string name="reminder_public">Aviso de LoApunto</string>
+    <string name="snooze_hour">En 1 hora</string>
+    <string name="snooze_tomorrow">Mañana</string>
+    <string name="daily_nudge">Toque diario</string>
+    <string name="nudge_explainer">Una vez al día, un toque con cuánto hay en Hoy y en la entrada. Solo los números, nunca lo que escribiste. No aparece si ambas están vacías.</string>
+    <string name="turn_off">Apagar</string>
+    <string name="nudge_today">Hoy: %d</string>
+    <string name="nudge_inbox">Entrada: %d</string>
+</resources>
