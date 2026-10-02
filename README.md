@@ -8,18 +8,22 @@ A tiny personal Android inbox for thoughts: capture quickly, triage later.
 
 ## Capture
 
-- **Jot** button in the app
-- Long-press the app icon → **Jot**
-- Quick Settings tile **Jot** (add it by editing your tiles)
+- **New** button in the app
+- Long-press the app icon → **New entry**
+- Quick Settings tile **New entry** (add it by editing your tiles)
 - Share text from any app → **LoApunto**
 
 Tapping outside the capture sheet or going back keeps what you typed; only **Cancel** discards it.
 
+The first line of an entry is its title; anything below it is details (a shopping list, notes, whatever).
+
 ## Triage
 
-- Swipe right: done (or reopen / restore)
-- Swipe left: trash (or delete for good from Trash)
-- Tap an entry to edit it, star it, move it, or set a due date
+- **Sort inbox one by one**: tidy each entry, pick a priority, send it to Today / Later / Done / Trash
+- Drag right past half the card: done (or reopen / restore)
+- Drag left past half the card: trash (or delete for good from Trash)
+- Tap an entry to edit it, set priority (High / Normal / Low), move it, or set a due date
+- Add a time to a due date to get a reminder notification (text is hidden on the lock screen)
 
 Everything stays on the phone in a single JSON file.
 

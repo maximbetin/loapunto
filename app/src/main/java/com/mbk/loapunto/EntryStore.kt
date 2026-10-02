@@ -33,6 +33,9 @@ object EntryStore {
     private val writeLock = Mutex()
     private var pendingSave: Job? = null
 
+    /** Called with the old and new list after every change (used to keep reminders in sync). */
+    var onChange: ((old: List<Entry>, new: List<Entry>) -> Unit)? = null
+
     fun init(context: Context) {
         if (::file.isInitialized) return
         file = AtomicFile(File(context.filesDir, "entries.json"))
@@ -55,19 +58,22 @@ object EntryStore {
         if (list.any { it.id == entry.id }) list.map { if (it.id == entry.id) entry else it } else list + entry
     }
 
-    fun update(id: String, transform: (Entry) -> Entry) = change { list ->
+    fun update(id: String, immediate: Boolean = false, transform: (Entry) -> Entry) = change(immediate) { list ->
         list.map { if (it.id == id) transform(it).copy(updatedAt = System.currentTimeMillis()) else it }
     }
 
     fun delete(id: String) = change { list -> list.filterNot { it.id == id } }
 
-    private fun change(immediate: Boolean = false, transform: (List<Entry>) -> List<Entry>) {
+    /** Returns the save job so callers outside the UI (notification actions) can wait for it. */
+    private fun change(immediate: Boolean = false, transform: (List<Entry>) -> List<Entry>): Job {
+        val old = _entries.value
         _entries.update(transform)
+        onChange?.invoke(old, _entries.value)
         pendingSave?.cancel()
-        pendingSave = io.launch {
+        return io.launch {
             if (!immediate) delay(300) // coalesce keystrokes while editing
             persist()
-        }
+        }.also { pendingSave = it }
     }
 
     private suspend fun persist() = writeLock.withLock {

@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Reminders must fire on time; this personal app isn't published on Play. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:name=".App"
         android:icon="@mipmap/ic_launcher"
@@ -12,6 +17,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,7 +33,7 @@
             android:name=".CaptureActivity"
             android:exported="true"
             android:excludeFromRecents="true"
-            android:label="@string/jot"
+            android:label="@string/new_entry"
             android:taskAffinity=""
             android:theme="@style/Theme.LoApunto.Capture"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize">
@@ -42,11 +48,24 @@
             android:name=".CaptureTileService"
             android:exported="true"
             android:icon="@drawable/ic_edit"
-            android:label="@string/jot"
+            android:label="@string/new_entry"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

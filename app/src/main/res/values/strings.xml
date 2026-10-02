@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">LoApunto</string>
-    <string name="jot">Jot</string>
+    <string name="new_entry">New entry</string>
 </resources>

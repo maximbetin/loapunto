@@ -90,7 +90,7 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
             Column(Modifier.navigationBarsPadding().padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Jot it down",
+                        "New entry",
                         style = MaterialTheme.typography.titleLarge,
                         fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold,
@@ -129,7 +129,7 @@ fun CaptureSheet(initial: String, onSave: (String) -> Unit, onClose: () -> Unit)
                             saveCurrent()
                             savedCount++
                         },
-                    ) { Text("Save + next") }
+                    ) { Text("Add another") }
                     Spacer(Modifier.width(8.dp))
                     Button(enabled = text.isNotBlank(), onClick = ::keepAndClose) { Text("Save") }
                 }

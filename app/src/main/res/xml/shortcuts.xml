@@ -2,9 +2,9 @@
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:enabled="true"
-        android:icon="@drawable/ic_shortcut_jot"
-        android:shortcutId="jot"
-        android:shortcutShortLabel="@string/jot">
+        android:icon="@drawable/ic_shortcut_new"
+        android:shortcutId="new_entry"
+        android:shortcutShortLabel="@string/new_entry">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetClass="com.mbk.loapunto.CaptureActivity"
