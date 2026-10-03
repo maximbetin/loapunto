@@ -54,9 +54,8 @@
     <string name="empty_inbox">Inbox zero</string>
     <string name="empty_inbox_hint">Tap New to get a thought out of your head.</string>
     <string name="empty_today">Nothing planned for today</string>
-    <string name="empty_today_hint">Hold an entry in the inbox and move it here.</string>
+    <string name="empty_today_hint">Tap New, or move an entry here from the inbox.</string>
     <string name="empty_later">Nothing parked for later</string>
-    <string name="empty_later_hint">Keepers and someday-maybes go here.</string>
     <string name="later_explainer">No date: things stay here until you move them. Ones set to \"Later, until…\" go back to Today on their day.</string>
     <string name="empty_done">Nothing done yet</string>
     <string name="empty_done_hint">Finished entries land here.</string>

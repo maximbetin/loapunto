@@ -123,7 +123,9 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
             ) {
                 TextField(
                     value = text,
-                    onValueChange = { new ->
+                    onValueChange = { typed ->
+                        // The title is one line; details are added from the entry itself.
+                        val new = typed.replace('\n', ' ')
                         text = new
                         EntryStore.update(entry.id) { it.copy(text = new) }
                     },

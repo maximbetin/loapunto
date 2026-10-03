@@ -66,6 +66,7 @@ import com.mbk.loapunto.Entry
 import com.mbk.loapunto.EntryStore
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
+import com.mbk.loapunto.splitTitle
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -87,7 +88,14 @@ fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
         EntryStore.update(entry.id) { it.copy(notes = new) }
     }
     fun close() {
-        if (title.isBlank() && notes.isBlank()) EntryStore.delete(entry.id)
+        when {
+            title.isNotBlank() -> Unit
+            notes.isBlank() -> EntryStore.delete(entry.id)
+            else -> {
+                val (newTitle, rest) = splitTitle(notes)
+                EntryStore.update(entry.id) { it.copy(text = newTitle, notes = rest) }
+            }
+        }
         onBack()
     }
     BackHandler(onBack = ::close)

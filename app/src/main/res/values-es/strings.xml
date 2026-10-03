@@ -56,9 +56,8 @@
     <string name="empty_inbox">Entrada vacía</string>
     <string name="empty_inbox_hint">Toca Nueva para sacarte una idea de la cabeza.</string>
     <string name="empty_today">Nada para hoy</string>
-    <string name="empty_today_hint">Mantén pulsada una nota de la entrada y muévela aquí.</string>
+    <string name="empty_today_hint">Toca Nueva, o mueve aquí una nota de la entrada.</string>
     <string name="empty_later">Nada aparcado para luego</string>
-    <string name="empty_later_hint">Lo que quieres guardar y los «algún día» van aquí.</string>
     <string name="later_explainer">Sin fecha: se queda aquí hasta que lo muevas. Lo puesto en «Luego, hasta…» vuelve a Hoy ese día.</string>
     <string name="empty_done">Nada hecho todavía</string>
     <string name="empty_done_hint">Las notas terminadas acaban aquí.</string>

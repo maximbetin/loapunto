@@ -8,21 +8,21 @@ A tiny personal Android inbox for thoughts: capture quickly, triage later.
 
 ## Capture
 
-- **New** button in the app
+- **New** button in the app: adds to the list you're looking at (Inbox, Today or Later)
 - The second app icon, **LoApunto +**, opens straight into a new entry (on Samsung you can set it as the side-key double-press)
 - Long-press the app icon → **New entry**
 - Quick Settings tile **New entry** (add it by editing your tiles)
 - Share text from any app → **LoApunto**
 
-Tapping outside the capture sheet or going back keeps what you typed; only **Cancel** discards it.
+Everything except the New button lands in the **Inbox**.
 
-The mic button dictates through [FUTO Voice Input](https://play.google.com/store/apps/details?id=org.futo.voiceinput) (offline Whisper) when it's installed, otherwise through the phone's own speech app.
+Tapping outside the capture sheet or going back keeps what you typed; only **Cancel** discards it.
 
 Each entry has a title and optional details you can add later. **Make it a checklist** turns the details into tickable items; nothing is reformatted while you type.
 
 ## Organise
 
-- Three lists: **Inbox**, **Today**, **Later**. 🕘 **History** holds Done and Trash (cleared after 30 days, or never: ⚙); ⚙ has the daily nudge and backups.
+- Three lists: **Inbox**, **Today**, **Later**. Later has no date: things stay there until you move them. 🕘 **History** holds Done and Trash (cleared after 30 days, or never: ⚙); ⚙ has the daily nudge and backups.
 - **Hold** an entry for big buttons: Today / Later / Inbox / Done / Trash.
 - **Drag ⋮⋮** to reorder. The bar on the left fades from top to bottom so the order is visible at a glance.
 - New entries and moved entries join the **bottom** of a list, so things keep the order you sent them in and never jump above what you put first.

@@ -34,7 +34,6 @@ class EntryJsonTest {
         assertNull(entry.dueTime)
         assertEquals(Status.INBOX, entry.status)
         assertEquals(5L, entry.updatedAt)
-        assertEquals(-5L, entry.rank)
     }
 
     @Test

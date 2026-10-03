@@ -91,7 +91,7 @@ fun rememberBackup(snackbar: SnackbarHostState): Pair<() -> Unit, () -> Unit> {
         { open.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }
 }
 
-/** Two rows, mostly icons: the nudge time, and backup. The pickers are owned by the caller. */
+/** Nudge time, backup, and history clearing. The pickers are owned by the caller. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSheet(onNudge: () -> Unit, onBackUp: () -> Unit, onRestore: () -> Unit, onDismiss: () -> Unit) {

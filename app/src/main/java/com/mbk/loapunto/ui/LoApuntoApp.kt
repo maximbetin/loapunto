@@ -296,7 +296,7 @@ private fun ListScreen(
                         Text(stringResource(R.string.one_at_a_time))
                     }
                 }
-                if (tab == Status.LATER) {
+                if (tab == Status.LATER && visible.isNotEmpty()) {
                     Text(
                         stringResource(R.string.later_explainer),
                         style = MaterialTheme.typography.labelMedium,
@@ -557,7 +557,7 @@ private fun EmptyState(tab: Status?, searchActive: Boolean) {
         tab == null -> R.string.empty_searching to R.string.empty_searching_hint
         tab == Status.INBOX -> R.string.empty_inbox to R.string.empty_inbox_hint
         tab == Status.TODAY -> R.string.empty_today to R.string.empty_today_hint
-        tab == Status.LATER -> R.string.empty_later to R.string.empty_later_hint
+        tab == Status.LATER -> R.string.empty_later to R.string.later_explainer
         tab == Status.DONE -> R.string.empty_done to R.string.empty_done_hint
         else -> R.string.empty_trash to R.string.empty_trash_hint
     }

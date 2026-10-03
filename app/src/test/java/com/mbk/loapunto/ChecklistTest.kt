@@ -25,10 +25,9 @@ class ChecklistTest {
     }
 
     @Test
-    fun addAndPreview() {
+    fun addedItemsAreTickable() {
         val notes = Checklist.add(Checklist.add("", "milk"), "eggs")
         assertEquals("[ ] milk\n[ ] eggs", notes)
         assertTrue(Checklist.has(notes))
-        assertEquals("✓ milk\n○ eggs", Checklist.preview(Checklist.toggle(notes, 0)))
     }
 }

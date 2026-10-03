@@ -24,6 +24,25 @@ import java.time.LocalDate
 private const val KEEP_HISTORY_MILLIS = 30L * 24 * 60 * 60 * 1000
 
 /**
+ * Brings parked entries whose day has come back into Today (in the order of their days), moves a
+ * due date that fell before the day back up to it, and, when [clearHistory], lets go of anything
+ * that has sat in Done or Trash for 30 days. Returns null when nothing needs to change.
+ */
+fun housekeep(list: List<Entry>, today: LocalDate, now: Long, clearHistory: Boolean): List<Entry>? {
+    val forgetBefore = now - KEEP_HISTORY_MILLIS
+    fun isDue(e: Entry) = e.status == Status.LATER && e.backOn != null && !e.backOn.isAfter(today)
+    fun isOld(e: Entry) = clearHistory && !e.isOpen && e.movedAt < forgetBefore
+    fun dueTooEarly(e: Entry) = e.backOn != null && e.due != null && e.due.isBefore(e.backOn)
+    if (list.none { isDue(it) || isOld(it) || dueTooEarly(it) }) return null
+    val waking = list.filter(::isDue).sortedBy { it.backOn }.map { it.id }
+    return list.filterNot(::isOld).map { e ->
+        val index = waking.indexOf(e.id)
+        if (index < 0) { if (dueTooEarly(e)) e.copy(due = e.backOn) else e }
+        else e.copy(status = Status.TODAY, rank = now + index, movedAt = now, updatedAt = now, backOn = null)
+    }
+}
+
+/**
  * All entries live in memory and are mirrored to a single JSON file.
  * Small enough for a personal inbox; no database needed.
  */
@@ -81,27 +100,14 @@ object EntryStore {
     fun parkUntil(id: String, day: LocalDate) = update(id) { it.parkedUntil(day) }
 
     /**
-     * Brings parked entries whose day has come back into Today, and lets go of anything that has
-     * sat in Done or Trash for 30 days (when [clearHistory]). Cheap; called whenever the app comes
-     * to the front. Also moves a stale due date on parked entries to their day back.
+     * Applies [housekeep] to the stored entries. Cheap; called whenever the app comes to the front
+     * and before the daily nudge. Null when there was nothing to do.
      */
     fun housekeeping(clearHistory: Boolean): Job? {
         val today = LocalDate.now()
         val now = System.currentTimeMillis()
-        val forgetBefore = now - KEEP_HISTORY_MILLIS
-        val list = _entries.value
-        fun isDue(e: Entry) = e.status == Status.LATER && e.backOn != null && !e.backOn.isAfter(today)
-        fun isOld(e: Entry) = clearHistory && !e.isOpen && e.movedAt < forgetBefore
-        fun dueTooEarly(e: Entry) = e.backOn != null && e.due != null && e.due.isBefore(e.backOn)
-        if (list.none { isDue(it) || isOld(it) || dueTooEarly(it) }) return null
-        return change(immediate = true) { current ->
-            val waking = current.filter(::isDue).sortedBy { it.backOn }.map { it.id }
-            current.filterNot(::isOld).map { e ->
-                val index = waking.indexOf(e.id)
-                if (index < 0) { if (dueTooEarly(e)) e.copy(due = e.backOn) else e }
-                else e.copy(status = Status.TODAY, rank = now + index, movedAt = now, updatedAt = now, backOn = null)
-            }
-        }
+        if (housekeep(_entries.value, today, now, clearHistory) == null) return null
+        return change(immediate = true) { housekeep(it, today, now, clearHistory) ?: it }
     }
 
     /** Moves several entries, keeping their order, to the bottom of another list. */
