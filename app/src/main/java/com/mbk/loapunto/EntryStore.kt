@@ -116,10 +116,8 @@ object EntryStore {
      * and before the daily nudge. Null when there was nothing to do.
      */
     fun housekeeping(clearHistory: Boolean): Job? {
-        val today = LocalDate.now()
-        val now = System.currentTimeMillis()
-        if (housekeep(_entries.value, today, now, clearHistory) == null) return null
-        return change(immediate = true) { housekeep(it, today, now, clearHistory) ?: it }
+        val tidied = housekeep(_entries.value, LocalDate.now(), System.currentTimeMillis(), clearHistory) ?: return null
+        return change(immediate = true) { tidied }
     }
 
     /** Moves several entries, keeping their order, to the bottom of another list. */
