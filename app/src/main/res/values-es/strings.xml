@@ -36,6 +36,7 @@
     <string name="drag_to_reorder">Arrastra para reordenar</string>
     <string name="hint_reorder">Mantén pulsada una nota para moverla · arrastra ⋮⋮ para reordenar</string>
     <string name="hint_hold">Mantén pulsada una nota para moverla</string>
+    <string name="hint_drag">Arrastra ⋮⋮ para reordenar</string>
     <string name="undo">Deshacer</string>
     <string name="deleted_for_good">Borrada para siempre</string>
     <string name="marked_done">Hecha</string>

@@ -142,30 +142,6 @@ object Reminders {
     }
 }
 
-/** The daily nudge time, or none. On at 09:00 until changed. */
-object Nudge {
-    private const val KEY = "nudgeTime"
-    private fun prefs(context: Context) = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-
-    fun time(context: Context): LocalTime? =
-        prefs(context).getString(KEY, "09:00")?.takeIf { it.isNotEmpty() }?.let(LocalTime::parse)
-
-    fun set(context: Context, time: LocalTime?) {
-        prefs(context).edit().putString(KEY, time?.toString().orEmpty()).apply()
-        Reminders.scheduleNudge(context)
-    }
-}
-
-/** Whether Done and Trash let go of entries after 30 days. On unless turned off. */
-object ClearHistory {
-    private const val KEY = "clearHistory"
-    private fun prefs(context: Context) = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-
-    fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, true)
-
-    fun set(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY, on).apply()
-}
-
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Reminders.ACTION_NUDGE) {

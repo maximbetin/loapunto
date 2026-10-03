@@ -22,11 +22,12 @@ Each entry has a title and optional details you can add later. **Make it a check
 
 ## Organise
 
-- Three lists: **Inbox**, **Today**, **Later**. Later shows **Coming back** (parked until a day) above **No date** (things that stay until you move them). 🕘 **History** holds Done and Trash (cleared after 30 days, or never: ⚙); ⚙ has the daily nudge and backups.
+- Three lists: **Inbox**, **Today**, **Later**. Later shows **Coming back** (parked until a day) above **No date** (things that stay until you move them). 🕘 **History** holds Done and Trash, grouped by day with a count per day (cleared after 30 days, or never: ⚙); ⚙ has the daily nudge and backups.
 - **Hold** an entry for big buttons: Today / Later / Inbox / Done / Trash.
+- Gesture hints (hold, drag) show until you have used the gesture once, then stop.
 - **Drag ⋮⋮** to reorder. The bar on the left fades from top to bottom so the order is visible at a glance.
 - New entries and moved entries join the **bottom** of a list, so things keep the order you sent them in and never jump above what you put first.
-- **Sort inbox one by one**: tidy each entry and send it somewhere, or skip it.
+- **Sort inbox one by one**: tidy each entry and send it somewhere, or skip it. Every move, here and in the lists, offers **Undo**.
 - Add a time to a due date to get a reminder notification (text is hidden on the lock screen), with **Done**, **In 1 hour** and **Tomorrow** buttons.
 - **One at a time** (Today): only the next entry on screen, with Done, Later and Not now.
 - **Back in the inbox on…** (hold an entry): park it until **Tomorrow**, **Next week**, **Next month**, or any day you pick. It waits faded in Later, then comes back into the **Inbox** on that day, to be sorted like anything new. A reminder set before that day moves to it, same time.

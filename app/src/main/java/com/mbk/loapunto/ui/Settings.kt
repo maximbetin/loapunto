@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -109,10 +110,19 @@ fun SettingsSheet(onNudge: () -> Unit, onBackUp: () -> Unit, onRestore: () -> Un
             }
             var clearHistory by remember { mutableStateOf(ClearHistory.isOn(context)) }
             SettingRow(R.drawable.ic_history, stringResource(R.string.clear_history)) {
-                TextButton(onClick = {
-                    clearHistory = !clearHistory
-                    ClearHistory.set(context, clearHistory)
-                }) { Text(stringResource(if (clearHistory) R.string.after_30_days else R.string.never)) }
+                Text(
+                    stringResource(if (clearHistory) R.string.after_30_days else R.string.never),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = clearHistory,
+                    onCheckedChange = {
+                        clearHistory = it
+                        ClearHistory.set(context, it)
+                    },
+                )
             }
         }
     }

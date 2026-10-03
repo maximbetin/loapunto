@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -72,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mbk.loapunto.ClearHistory
 import com.mbk.loapunto.Entry
 import com.mbk.loapunto.EntryStore
+import com.mbk.loapunto.Learned
 import com.mbk.loapunto.Nudge
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
@@ -86,9 +86,6 @@ private sealed interface Screen {
     data object Focus : Screen
     data class Detail(val id: String) : Screen
 }
-
-/** A block of cards under an optional heading; only a hand-ordered block can be dragged. */
-private data class Section(@StringRes val title: Int?, val entries: List<Entry>, val reorderable: Boolean = false)
 
 private val MainTabs = listOf(Status.INBOX, Status.TODAY, Status.LATER)
 
@@ -177,7 +174,7 @@ fun rememberMover(snackbar: SnackbarHostState): (Entry, Status?) -> Unit {
 fun ordered(entries: List<Entry>, status: Status): List<Entry> =
     entries.filter { it.status == status }.let { list ->
         if (status.isOrdered) list.sortedWith(compareBy<Entry> { it.rank }.thenByDescending { it.createdAt })
-        else list.sortedByDescending { it.updatedAt }
+        else list.sortedByDescending { it.movedAt }
     }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -216,15 +213,16 @@ private fun ListScreen(
     // Today entries that were put there on an earlier day.
     val leftOvers = if (tab == Status.TODAY && !searching) visible.filter { it.movedAt < todayStart } else emptyList()
     // Later is two piles, so show them as two: what has a day to come back on, and what has none.
-    val sections = remember(visible, tab, searchActive) {
-        val handOrdered = !searchActive && tab.isOrdered
-        val (parked, undated) = visible.partition { it.backOn != null }
-        if (searchActive || tab != Status.LATER || parked.isEmpty()) listOf(Section(null, visible, handOrdered))
-        else buildList {
-            // The ones coming back are ordered by their day; only the dateless pile is yours to order.
-            add(Section(R.string.coming_back, parked.sortedBy { it.backOn }))
-            if (undated.isNotEmpty()) add(Section(R.string.no_date, undated, handOrdered))
-        }
+    val comingBack = stringResource(R.string.coming_back)
+    val noDate = stringResource(R.string.no_date)
+    val handOrdered = !searchActive && tab.isOrdered
+    val (parked, undated) = visible.partition { it.backOn != null }
+    val sections = if (searchActive || tab != Status.LATER || parked.isEmpty()) {
+        listOf(Section(null, visible, handOrdered))
+    } else buildList {
+        // The ones coming back are ordered by their day; only the dateless pile is yours to order.
+        add(Section(comingBack, parked.sortedBy { it.backOn }))
+        if (undated.isNotEmpty()) add(Section(noDate, undated, handOrdered))
     }
     // Dateless and untouched for a month: offer a walk through them before they become later forever.
     val forgotten = if (tab == Status.LATER && !searching) visible.filter { it.isForgotten() } else emptyList()
@@ -383,60 +381,8 @@ private fun ForgottenBar(count: Int, onReview: () -> Unit) {
     }
 }
 
-/** A heading above a block of cards: Later's two halves, visible at a glance. */
 @Composable
-private fun SectionHeader(@StringRes title: Int) {
-    Text(
-        stringResource(title),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 4.dp),
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ArchiveScreen(entries: List<Entry>, onOpen: (Entry) -> Unit, onBack: () -> Unit) {
-    val snackbar = remember { SnackbarHostState() }
-    val move = rememberMover(snackbar)
-    var tab by rememberSaveable { mutableStateOf(Status.DONE) }
-    val visible = remember(entries, tab) { ordered(entries, tab) }
-    BackHandler(onBack = onBack)
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbar) },
-        topBar = {
-            TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back))
-                    }
-                },
-                title = {
-                    Column {
-                        Text(stringResource(R.string.history), fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
-                        if (ClearHistory.isOn(LocalContext.current)) Text(
-                            stringResource(R.string.history_note),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            Tabs(listOf(Status.DONE, Status.TRASH), entries, tab, onSelect = { tab = it })
-            if (visible.isEmpty()) EmptyState(tab, searchActive = false)
-            else EntryList(listOf(Section(null, visible)), showStatus = false, onOpen = onOpen, onMove = move)
-        }
-    }
-}
-
-@Composable
-private fun Tabs(tabs: List<Status>, entries: List<Entry>, selected: Status, onSelect: (Status) -> Unit) {
+internal fun Tabs(tabs: List<Status>, entries: List<Entry>, selected: Status, onSelect: (Status) -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -461,172 +407,5 @@ private fun Tabs(tabs: List<Status>, entries: List<Entry>, selected: Status, onS
                 modifier = Modifier.weight(1f).height(40.dp),
             )
         }
-    }
-}
-
-/**
- * Cards with long-press for the move sheet. The hand-ordered section also gets a drag grip; the new
- * order is shown locally while dragging and saved when the drag ends.
- */
-@Composable
-private fun EntryList(
-    sections: List<Section>,
-    showStatus: Boolean,
-    onOpen: (Entry) -> Unit,
-    onMove: (Entry, Status?) -> Unit,
-) {
-    val haptics = LocalHapticFeedback.current
-    var sheetFor by remember { mutableStateOf<Entry?>(null) }
-    var localOrder by remember { mutableStateOf<List<String>?>(null) }
-    var dragging by remember { mutableStateOf(false) }
-
-    // At most one section is hand-ordered, and dragging only happens inside it.
-    val handIds = sections.firstOrNull { it.reorderable }?.entries?.map { it.id }
-    val shown = remember(sections, localOrder) {
-        val order = localOrder
-        if (order == null || order.toSet() != handIds?.toSet()) sections
-        else sections.map { section ->
-            if (!section.reorderable) section
-            else section.copy(entries = section.entries.associateBy { it.id }.let { byId -> order.map { byId.getValue(it) } })
-        }
-    }
-    val entries = shown.flatMap { it.entries }
-    val currentHand by rememberUpdatedState(shown.firstOrNull { it.reorderable }?.entries?.map { it.id }.orEmpty())
-    // Drop the local order once the store has caught up with it.
-    LaunchedEffect(sections, dragging) {
-        if (!dragging && localOrder == handIds) localOrder = null
-    }
-
-    val listState = rememberLazyListState()
-    // When one entry joins the bottom (a new capture), scroll down so you see it land.
-    var knownIds by remember { mutableStateOf(entries.map { it.id }.toSet()) }
-    LaunchedEffect(entries) {
-        val ids = entries.map { it.id }
-        val added = ids.filterNot { it in knownIds }
-        knownIds = ids.toSet()
-        if (added.size == 1 && ids.last() == added[0]) {
-            listState.animateScrollToItem(ids.lastIndex + shown.count { it.title != null })
-        }
-    }
-    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        val ids = currentHand.toMutableList()
-        val fromIndex = ids.indexOf(from.key)
-        val toIndex = ids.indexOf(to.key)
-        // Headings and dated cards are not part of the hand-ordered block.
-        if (fromIndex >= 0 && toIndex >= 0) {
-            ids.add(toIndex, ids.removeAt(fromIndex))
-            localOrder = ids
-            haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-        }
-    }
-
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        shown.forEach { section ->
-            section.title?.let { title -> item(key = "section-$title") { SectionHeader(title) } }
-            itemsIndexed(section.entries, key = { _, entry -> entry.id }) { index, entry ->
-                ReorderableItem(reorderState, key = entry.id, enabled = section.reorderable) { isDragging ->
-                    EntryCard(
-                        entry = entry,
-                        emphasis = if (section.reorderable) emphasisFor(index, section.entries.size) else null,
-                        showStatus = showStatus,
-                        onClick = { onOpen(entry) },
-                        onLongClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            sheetFor = entry
-                        },
-                        elevation = if (isDragging) 8f else 1f,
-                        handle = if (!section.reorderable) null else {
-                            {
-                                IconButton(
-                                    onClick = {},
-                                    modifier = Modifier.draggableHandle(
-                                        onDragStarted = {
-                                            dragging = true
-                                            haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                        },
-                                        onDragStopped = {
-                                            dragging = false
-                                            localOrder?.let(EntryStore::reorder)
-                                        },
-                                    ),
-                                ) {
-                                    Icon(
-                                        painterResource(R.drawable.ic_drag),
-                                        contentDescription = stringResource(R.string.drag_to_reorder),
-                                        tint = MaterialTheme.colorScheme.outline,
-                                    )
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        }
-        item(key = "hint") {
-            Text(
-                stringResource(if (handIds == null) R.string.hint_hold else R.string.hint_reorder),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-        }
-    }
-
-    sheetFor?.let { entry ->
-        MoveSheet(
-            entry = entry,
-            onDismiss = { sheetFor = null },
-            onMove = { target ->
-                sheetFor = null
-                onMove(entry, target)
-            },
-            onEdit = {
-                sheetFor = null
-                onOpen(entry)
-            },
-            onParkUntil = { day ->
-                sheetFor = null
-                EntryStore.parkUntil(entry.id, day)
-            },
-        )
-    }
-}
-
-@Composable
-private fun EmptyState(tab: Status?, searchActive: Boolean) {
-    val (title, hint) = when {
-        searchActive -> R.string.empty_search to R.string.empty_search_hint
-        tab == null -> R.string.empty_searching to R.string.empty_searching_hint
-        tab == Status.INBOX -> R.string.empty_inbox to R.string.empty_inbox_hint
-        tab == Status.TODAY -> R.string.empty_today to R.string.empty_today_hint
-        tab == Status.LATER -> R.string.empty_later to R.string.empty_later_hint
-        tab == Status.DONE -> R.string.empty_done to R.string.empty_done_hint
-        else -> R.string.empty_trash to R.string.empty_trash_hint
-    }
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            stringResource(title),
-            style = MaterialTheme.typography.titleLarge,
-            fontFamily = FontFamily.Serif,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(hint),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(64.dp))
     }
 }

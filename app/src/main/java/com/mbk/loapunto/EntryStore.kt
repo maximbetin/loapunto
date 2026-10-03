@@ -44,6 +44,17 @@ fun housekeep(list: List<Entry>, today: LocalDate, now: Long, clearHistory: Bool
 }
 
 /**
+ * Puts [ids] in that order within their own list, by handing out the ranks those entries already
+ * occupy. Entries not named keep theirs, so one list can be reordered without touching the others.
+ */
+fun reordered(list: List<Entry>, ids: List<String>): List<Entry> {
+    val named = ids.toSet()
+    val ranks = list.filter { it.id in named }.map { it.rank }.sorted()
+    val newRank = ids.zip(ranks).toMap()
+    return list.map { entry -> newRank[entry.id]?.let { entry.copy(rank = it) } ?: entry }
+}
+
+/**
  * All entries live in memory and are mirrored to a single JSON file.
  * Small enough for a personal inbox; no database needed.
  */
@@ -136,13 +147,7 @@ object EntryStore {
         return imported.size
     }
 
-    /** Applies a new order to one list, reusing that list's existing rank values. */
-    fun reorder(ids: List<String>) = change { list ->
-        val idSet = ids.toSet()
-        val ranks = list.filter { it.id in idSet }.map { it.rank }.sorted()
-        val newRank = ids.zip(ranks).toMap()
-        list.map { entry -> newRank[entry.id]?.let { entry.copy(rank = it) } ?: entry }
-    }
+    fun reorder(ids: List<String>) = change { reordered(it, ids) }
 
     /** Returns the save job so callers outside the UI (notification actions) can wait for it. */
     private fun change(immediate: Boolean = false, transform: (List<Entry>) -> List<Entry>): Job {
