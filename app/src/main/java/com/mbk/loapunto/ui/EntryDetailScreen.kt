@@ -137,12 +137,16 @@ fun EntryDetailScreen(entry: Entry, onBack: () -> Unit) {
                 TextField(
                     value = title,
                     onValueChange = { new ->
-                        // Enter in the title jumps to the details instead of adding a line.
+                        // The title is one line: Enter jumps to the details, and anything pasted
+                        // after the first line joins them rather than being dropped.
                         val head = new.substringBefore('\n')
-                        val rest = if ('\n' in new) new.substringAfter('\n') else null
                         title = head
                         EntryStore.update(entry.id) { it.copy(text = head) }
-                        if (rest != null) notesFocus.requestFocus()
+                        if ('\n' in new) {
+                            val rest = new.substringAfter('\n').trim()
+                            if (rest.isNotEmpty()) saveNotes(listOf(notes.trimEnd(), rest).filter { it.isNotEmpty() }.joinToString("\n"))
+                            notesFocus.requestFocus()
+                        }
                     },
                     placeholder = { Text(stringResource(R.string.title)) },
                     textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),

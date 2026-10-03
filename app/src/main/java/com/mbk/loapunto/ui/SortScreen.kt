@@ -31,6 +31,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -80,6 +82,8 @@ enum class Walk {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SortScreen(entries: List<Entry>, walk: Walk, onExit: () -> Unit) {
+    val snackbar = remember { SnackbarHostState() }
+    val move = rememberMover(snackbar)
     var skipped by rememberSaveable { mutableStateOf(listOf<String>()) }
     val queue = walk.queue(entries).filterNot { it.id in skipped }
     val total = rememberSaveable { queue.size }
@@ -90,6 +94,7 @@ fun SortScreen(entries: List<Entry>, walk: Walk, onExit: () -> Unit) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -120,19 +125,20 @@ fun SortScreen(entries: List<Entry>, walk: Walk, onExit: () -> Unit) {
                 modifier = Modifier.weight(1f),
             ) { entry ->
                 if (entry == null) AllSorted(walk, skipped.size, onExit)
-                else SortCard(entry, walk, onSkip = { skipped = skipped + entry.id })
+                else SortCard(entry, walk, move, onSkip = { skipped = skipped + entry.id })
             }
         }
     }
 }
 
 @Composable
-private fun SortCard(shown: Entry, walk: Walk, onSkip: () -> Unit) {
+private fun SortCard(shown: Entry, walk: Walk, move: (Entry, Status?) -> Unit, onSkip: () -> Unit) {
     // AnimatedContent hands us the entry as it was when it appeared; read the live copy for chips.
     val live by EntryStore.entries.collectAsStateWithLifecycle()
     val entry = live.firstOrNull { it.id == shown.id } ?: shown
     var text by remember(entry.id) { mutableStateOf(entry.text) }
-    fun send(status: Status) = EntryStore.move(entry.id, status)
+    // Through the mover, so a mis-tap in a fast walk can be undone.
+    fun send(status: Status) = move(entry, status)
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -193,7 +199,7 @@ private fun SortCard(shown: Entry, walk: Walk, onSkip: () -> Unit) {
             }
             // Keeping it parked counts as having looked at it: that is what buys another month.
             TextButton(
-                onClick = { if (parked) send(Status.LATER) else onSkip() },
+                onClick = { if (parked) EntryStore.move(entry.id, Status.LATER) else onSkip() },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) { Text(stringResource(if (parked) R.string.keep_parked else R.string.skip_for_now)) }
         }
