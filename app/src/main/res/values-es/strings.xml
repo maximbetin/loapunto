@@ -29,6 +29,9 @@
     <string name="new_button">Nueva</string>
     <string name="sort_inbox">Ordenar la entrada una a una (%d)</string>
     <string name="keep">Mantener</string>
+    <string name="coming_back">Con día de vuelta</string>
+    <string name="no_date">Sin fecha</string>
+    <string name="review">Repasar</string>
     <string name="off">apagado</string>
     <string name="drag_to_reorder">Arrastra para reordenar</string>
     <string name="hint_reorder">Mantén pulsada una nota para moverla · arrastra ⋮⋮ para reordenar</string>
@@ -42,6 +45,11 @@
         <item quantity="one">%d hecha hoy</item>
         <item quantity="many">%d hechas hoy</item>
         <item quantity="other">%d hechas hoy</item>
+    </plurals>
+    <plurals name="here_a_month">
+        <item quantity="one">%d aquí desde hace más de un mes</item>
+        <item quantity="many">%d aquí desde hace más de un mes</item>
+        <item quantity="other">%d aquí desde hace más de un mes</item>
     </plurals>
     <plurals name="left_over">
         <item quantity="one">%d pendiente de antes</item>
@@ -58,7 +66,7 @@
     <string name="empty_today">Nada para hoy</string>
     <string name="empty_today_hint">Toca Nueva, o mueve aquí una nota de la entrada.</string>
     <string name="empty_later">Nada aparcado para luego</string>
-    <string name="later_explainer">Sin fecha: se queda aquí hasta que lo muevas. Lo puesto en «Luego, hasta…» vuelve a Hoy ese día.</string>
+    <string name="empty_later_hint">Mantén pulsada una nota y elige un día: vuelve a la entrada ese día.</string>
     <string name="empty_done">Nada hecho todavía</string>
     <string name="empty_done_hint">Las notas terminadas acaban aquí.</string>
     <string name="empty_trash">La papelera está vacía</string>
@@ -110,13 +118,18 @@
     <!-- Sorting -->
     <string name="stop_sorting">Dejar de ordenar</string>
     <string name="sorted">Ordenado</string>
+    <string name="reviewed">Repasado</string>
     <string name="n_of_total">%1$d de %2$d</string>
     <string name="captured_tidy">Apuntada %s · toca el texto para pulirlo</string>
     <string name="where_does_it_go">¿Dónde va?</string>
+    <string name="still_want_this">¿Todavía lo quieres?</string>
+    <string name="parked_tidy">Aparcada %s · toca el texto para pulirlo</string>
+    <string name="keep_parked">Dejarla aparcada</string>
     <string name="already_done">Ya hecha</string>
     <string name="skip_for_now">Saltar por ahora</string>
     <string name="head_cleared">Cabeza despejada</string>
     <string name="all_sorted">Todo lo de la entrada tiene su sitio.</string>
+    <string name="all_reviewed">Nada lleva más de un mes en Luego sin repasar.</string>
     <plurals name="skipped_waiting">
         <item quantity="one">%d saltada. Sigue esperando en la entrada.</item>
         <item quantity="many">%d saltadas. Siguen esperando en la entrada.</item>
@@ -142,7 +155,10 @@
     <string name="settings">Ajustes</string>
     <string name="backup">Copia</string>
     <string name="one_at_a_time">De una en una</string>
-    <string name="later_until">Luego, hasta…</string>
+    <string name="park_until">De vuelta a la entrada el…</string>
+    <string name="next_week">En una semana</string>
+    <string name="next_month">En un mes</string>
+    <string name="pick_a_day">Elegir día…</string>
     <string name="back_on">Hasta %s</string>
     <string name="not_now">Ahora no</string>
     <string name="today_clear">Hoy está despejado</string>

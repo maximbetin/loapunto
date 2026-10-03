@@ -58,12 +58,30 @@ import com.mbk.loapunto.EntryStore
 import com.mbk.loapunto.R
 import com.mbk.loapunto.Status
 
-/** Walks through the inbox oldest-first, one entry at a time, until everything has a home. */
+/**
+ * The two one-at-a-time walks. An entry leaves the queue the moment it stops matching, and every
+ * button on the card touches [Entry.updatedAt], so pressing anything moves the walk along.
+ */
+enum class Walk {
+    /** The inbox, oldest first, until everything has a home. */
+    INBOX,
+
+    /** The someday pile: parked with no day, untouched for a month. Still want this? */
+    PARKED,
+    ;
+
+    fun queue(entries: List<Entry>): List<Entry> = when (this) {
+        INBOX -> entries.filter { it.status == Status.INBOX }.sortedBy { it.createdAt }
+        PARKED -> entries.filter { it.isForgotten() }.sortedBy { it.updatedAt }
+    }
+}
+
+/** Walks through one queue, one entry at a time, until it is empty. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SortInboxScreen(entries: List<Entry>, onExit: () -> Unit) {
+fun SortScreen(entries: List<Entry>, walk: Walk, onExit: () -> Unit) {
     var skipped by rememberSaveable { mutableStateOf(listOf<String>()) }
-    val queue = entries.filter { it.status == Status.INBOX && it.id !in skipped }.sortedBy { it.createdAt }
+    val queue = walk.queue(entries).filterNot { it.id in skipped }
     val total = rememberSaveable { queue.size }
     val current = queue.firstOrNull()
     val handled = (total - queue.size).coerceAtLeast(0)
@@ -80,7 +98,8 @@ fun SortInboxScreen(entries: List<Entry>, onExit: () -> Unit) {
                 },
                 title = {
                     Text(
-                        if (current == null) stringResource(R.string.sorted) else stringResource(R.string.n_of_total, handled + 1, total),
+                        if (current == null) stringResource(if (walk == Walk.INBOX) R.string.sorted else R.string.reviewed)
+                        else stringResource(R.string.n_of_total, handled + 1, total),
                         fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Bold,
                     )
@@ -100,14 +119,15 @@ fun SortInboxScreen(entries: List<Entry>, onExit: () -> Unit) {
                 label = "sortCard",
                 modifier = Modifier.weight(1f),
             ) { entry ->
-                if (entry == null) AllSorted(skipped.size, onExit) else SortCard(entry, onSkip = { skipped = skipped + entry.id })
+                if (entry == null) AllSorted(walk, skipped.size, onExit)
+                else SortCard(entry, walk, onSkip = { skipped = skipped + entry.id })
             }
         }
     }
 }
 
 @Composable
-private fun SortCard(shown: Entry, onSkip: () -> Unit) {
+private fun SortCard(shown: Entry, walk: Walk, onSkip: () -> Unit) {
     // AnimatedContent hands us the entry as it was when it appeared; read the live copy for chips.
     val live by EntryStore.entries.collectAsStateWithLifecycle()
     val entry = live.firstOrNull { it.id == shown.id } ?: shown
@@ -135,7 +155,8 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp).padding(4.dp),
                 )
                 Text(
-                    stringResource(R.string.captured_tidy, formatAge(entry.createdAt)),
+                    if (walk == Walk.PARKED) stringResource(R.string.parked_tidy, formatAge(entry.movedAt))
+                    else stringResource(R.string.captured_tidy, formatAge(entry.createdAt)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
@@ -148,10 +169,19 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
             Modifier.navigationBarsPadding().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(stringResource(R.string.where_does_it_go), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val parked = walk == Walk.PARKED
+            Text(
+                stringResource(if (parked) R.string.still_want_this else R.string.where_does_it_go),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { send(Status.TODAY) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.today)) }
-                FilledTonalButton(onClick = { send(Status.LATER) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.later)) }
+                // Out of the inbox it goes to Later; out of Later it goes back to the inbox to be sorted.
+                FilledTonalButton(
+                    onClick = { send(if (parked) Status.INBOX else Status.LATER) },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(if (parked) R.string.inbox else R.string.later)) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { send(Status.DONE) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.already_done)) }
@@ -161,13 +191,17 @@ private fun SortCard(shown: Entry, onSkip: () -> Unit) {
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.trash)) }
             }
-            TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(stringResource(R.string.skip_for_now)) }
+            // Keeping it parked counts as having looked at it: that is what buys another month.
+            TextButton(
+                onClick = { if (parked) send(Status.LATER) else onSkip() },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) { Text(stringResource(if (parked) R.string.keep_parked else R.string.skip_for_now)) }
         }
     }
 }
 
 @Composable
-private fun AllSorted(skippedCount: Int, onExit: () -> Unit) {
+private fun AllSorted(walk: Walk, skippedCount: Int, onExit: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -176,7 +210,8 @@ private fun AllSorted(skippedCount: Int, onExit: () -> Unit) {
         Text(stringResource(R.string.head_cleared), style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Serif)
         Spacer(Modifier.height(8.dp))
         Text(
-            if (skippedCount == 0) stringResource(R.string.all_sorted)
+            if (walk == Walk.PARKED) stringResource(R.string.all_reviewed)
+            else if (skippedCount == 0) stringResource(R.string.all_sorted)
             else pluralStringResource(R.plurals.skipped_waiting, skippedCount, skippedCount),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -29,6 +29,9 @@
     <string name="new_button">New</string>
     <string name="sort_inbox">Sort inbox one by one (%d)</string>
     <string name="keep">Keep</string>
+    <string name="coming_back">Coming back</string>
+    <string name="no_date">No date</string>
+    <string name="review">Review</string>
     <string name="off">off</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="hint_reorder">Hold an entry to move it · drag ⋮⋮ to reorder</string>
@@ -41,6 +44,10 @@
     <plurals name="done_today">
         <item quantity="one">%d done today</item>
         <item quantity="other">%d done today</item>
+    </plurals>
+    <plurals name="here_a_month">
+        <item quantity="one">%d here for over a month</item>
+        <item quantity="other">%d here for over a month</item>
     </plurals>
     <plurals name="left_over">
         <item quantity="one">%d left over</item>
@@ -56,7 +63,7 @@
     <string name="empty_today">Nothing planned for today</string>
     <string name="empty_today_hint">Tap New, or move an entry here from the inbox.</string>
     <string name="empty_later">Nothing parked for later</string>
-    <string name="later_explainer">No date: things stay here until you move them. Ones set to \"Later, until…\" go back to Today on their day.</string>
+    <string name="empty_later_hint">Hold an entry and pick a day: it comes back to the inbox then.</string>
     <string name="empty_done">Nothing done yet</string>
     <string name="empty_done_hint">Finished entries land here.</string>
     <string name="empty_trash">Trash is empty</string>
@@ -106,13 +113,18 @@
     <!-- Sorting -->
     <string name="stop_sorting">Stop sorting</string>
     <string name="sorted">Sorted</string>
+    <string name="reviewed">Reviewed</string>
     <string name="n_of_total">%1$d of %2$d</string>
     <string name="captured_tidy">Captured %s · tap the text to tidy it up</string>
     <string name="where_does_it_go">Where does it go?</string>
+    <string name="still_want_this">Still want this?</string>
+    <string name="parked_tidy">Parked %s · tap the text to tidy it up</string>
+    <string name="keep_parked">Keep it parked</string>
     <string name="already_done">Already done</string>
     <string name="skip_for_now">Skip for now</string>
     <string name="head_cleared">Head cleared</string>
     <string name="all_sorted">Everything in the inbox has a place now.</string>
+    <string name="all_reviewed">Nothing has been sitting in Later unlooked-at for a month.</string>
     <plurals name="skipped_waiting">
         <item quantity="one">%d skipped. It\'s still waiting in the inbox.</item>
         <item quantity="other">%d skipped. They\'re still waiting in the inbox.</item>
@@ -137,7 +149,10 @@
     <string name="settings">Settings</string>
     <string name="backup">Backup</string>
     <string name="one_at_a_time">One at a time</string>
-    <string name="later_until">Later, until…</string>
+    <string name="park_until">Back in the inbox on…</string>
+    <string name="next_week">Next week</string>
+    <string name="next_month">Next month</string>
+    <string name="pick_a_day">Pick a day…</string>
     <string name="back_on">Until %s</string>
     <string name="not_now">Not now</string>
     <string name="today_clear">Today\'s clear</string>

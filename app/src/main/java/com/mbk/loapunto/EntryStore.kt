@@ -24,9 +24,10 @@ import java.time.LocalDate
 private const val KEEP_HISTORY_MILLIS = 30L * 24 * 60 * 60 * 1000
 
 /**
- * Brings parked entries whose day has come back into Today (in the order of their days), moves a
- * due date that fell before the day back up to it, and, when [clearHistory], lets go of anything
- * that has sat in Done or Trash for 30 days. Returns null when nothing needs to change.
+ * Brings parked entries whose day has come (in the order of their days) back into the Inbox, to be
+ * sorted like anything new: the day you picked says "look at this again", not "do it today". Also
+ * moves a due date that fell before the day back up to it, and, when [clearHistory], lets go of
+ * anything that has sat in Done or Trash for 30 days. Returns null when nothing needs to change.
  */
 fun housekeep(list: List<Entry>, today: LocalDate, now: Long, clearHistory: Boolean): List<Entry>? {
     val forgetBefore = now - KEEP_HISTORY_MILLIS
@@ -38,7 +39,7 @@ fun housekeep(list: List<Entry>, today: LocalDate, now: Long, clearHistory: Bool
     return list.filterNot(::isOld).map { e ->
         val index = waking.indexOf(e.id)
         if (index < 0) { if (dueTooEarly(e)) e.copy(due = e.backOn) else e }
-        else e.copy(status = Status.TODAY, rank = now + index, movedAt = now, updatedAt = now, backOn = null)
+        else e.copy(status = Status.INBOX, rank = now + index, movedAt = now, updatedAt = now, backOn = null)
     }
 }
 
@@ -96,7 +97,7 @@ object EntryStore {
         if (it.status == status) it else it.copy(status = status, rank = now, movedAt = now, backOn = null)
     }
 
-    /** Parks an entry in Later until [day]; [housekeeping] brings it back into Today. */
+    /** Parks an entry in Later until [day]; [housekeeping] brings it back into the Inbox. */
     fun parkUntil(id: String, day: LocalDate) = update(id) { it.parkedUntil(day) }
 
     /**

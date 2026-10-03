@@ -39,13 +39,20 @@ data class Entry(
     val rank: Long = createdAt,
     /** When it last changed list: drives "done today" and Today's left-overs. */
     val movedAt: Long = createdAt,
-    /** Parked in Later until this day, then it comes back into Today on its own. */
+    /** Parked in Later until this day, then it comes back into the Inbox on its own. */
     val backOn: LocalDate? = null,
 ) {
     val isOpen get() = status != Status.DONE && status != Status.TRASH
 
     /** Open but untouched for a month: shown faded, never hidden. */
     fun isStale(now: Long = System.currentTimeMillis()) = isOpen && now - updatedAt > STALE_AFTER_MILLIS
+
+    /**
+     * In Later with no day to come back on, and untouched for a month: the kind of thing that
+     * quietly becomes "later forever". Later offers to walk through these.
+     */
+    fun isForgotten(now: Long = System.currentTimeMillis()) =
+        status == Status.LATER && backOn == null && isStale(now)
 
     /** When to notify, or null if this entry has no pending reminder. */
     val reminderAt: Long?

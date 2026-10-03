@@ -1,5 +1,6 @@
 package com.mbk.loapunto.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
@@ -35,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mbk.loapunto.Entry
@@ -82,11 +86,26 @@ fun MoveSheet(
                 }
                 Spacer(Modifier.height(10.dp))
             }
+            // Parking is only honest if dating something is as cheap as a tap.
+            if (entry.isOpen) {
+                Text(
+                    stringResource(R.string.park_until),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
+                val today = LocalDate.now()
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DayChip(R.string.tomorrow, Modifier.weight(1f)) { onParkUntil(today.plusDays(1)) }
+                    DayChip(R.string.next_week, Modifier.weight(1f)) { onParkUntil(today.plusWeeks(1)) }
+                    DayChip(R.string.next_month, Modifier.weight(1f)) { onParkUntil(today.plusMonths(1)) }
+                }
+            }
             Row(Modifier.align(Alignment.CenterHorizontally)) {
                 if (entry.isOpen) TextButton(onClick = { picking = true }) {
                     Icon(painterResource(R.drawable.ic_event), contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.later_until))
+                    Text(stringResource(R.string.pick_a_day))
                 }
                 TextButton(onClick = onEdit) { Text(stringResource(R.string.open_and_edit)) }
             }
@@ -117,6 +136,21 @@ private fun ParkDatePicker(onDismiss: () -> Unit, onPick: (LocalDate) -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     ) { DatePicker(state) }
+}
+
+/** One of the ready-made parking days, in Later's calm blue. */
+@Composable
+private fun DayChip(@StringRes label: Int, modifier: Modifier, onClick: () -> Unit) {
+    AssistChip(
+        onClick = onClick,
+        label = { Text(stringResource(label), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ),
+        border = null,
+        modifier = modifier,
+    )
 }
 
 @Composable

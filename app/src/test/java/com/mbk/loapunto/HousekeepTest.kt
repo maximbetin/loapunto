@@ -11,7 +11,7 @@ class HousekeepTest {
     private val now = 100 * day
 
     @Test
-    fun parkedEntriesComeBackIntoTodayOnTheirDayEarliestFirst() {
+    fun parkedEntriesComeBackIntoTheInboxOnTheirDayEarliestFirst() {
         val wednesday = Entry(id = "wed", text = "a").parkedUntil(monday.plusDays(2), now = 0)
         val sunday = Entry(id = "sun", text = "b").parkedUntil(monday.minusDays(1), now = 0)
         val mon = Entry(id = "mon", text = "c").parkedUntil(monday, now = 0)
@@ -19,8 +19,8 @@ class HousekeepTest {
         val result = housekeep(listOf(mon, wednesday, sunday), monday, now, clearHistory = false)!!.associateBy { it.id }
 
         assertEquals(Status.LATER, result.getValue("wed").status)
-        assertEquals(Status.TODAY, result.getValue("sun").status)
-        assertEquals(Status.TODAY, result.getValue("mon").status)
+        assertEquals(Status.INBOX, result.getValue("sun").status)
+        assertEquals(Status.INBOX, result.getValue("mon").status)
         assertNull(result.getValue("mon").backOn)
         // The one parked for the earlier day sits above.
         assert(result.getValue("sun").rank < result.getValue("mon").rank)
